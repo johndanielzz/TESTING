@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
     <meta charset="UTF-8">
     <title>Login - MatrixMarketplace</title>
-    <link rel="icon" type="image/x-icon" href="matrixx.png">
+    <link rel="stylesheet" href="style.css">
     <style>
-        /* (All your original styles preserved exactly) */
         body {
             display: flex;
             justify-content: center;
@@ -18,7 +29,6 @@
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             color: #fff;
-            margin: 0;
         }
 
         @keyframes gradientBG {
@@ -44,7 +54,6 @@
             width: 360px;
             text-align: center;
             animation: fadeIn 0.8s ease;
-            position: relative;
         }
 
         .login-box h1 {
@@ -111,19 +120,7 @@
             text-shadow: 0 0 8px #06b6d4, 0 0 15px #4f46e5;
         }
 
-        .alert {
-            position: absolute;
-            top: -50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 12px;
-            display: none;
-            font-weight: 600;
-        }
-
+        /* Customer Care Section */
         .support {
             margin-top: 30px;
             text-align: center;
@@ -183,18 +180,16 @@
 
 <body>
     <div class="login-box">
-        <div class="alert" id="alertMsg"></div>
         <h1>Login</h1>
-        <form id="loginForm">
+        <form onsubmit="return loginUser(event)">
             <input type="email" id="email" placeholder="Email Address" required>
             <input type="password" id="password" placeholder="Password" required>
             <button type="submit">Login</button>
         </form>
-        <p>Don’t have an account? <a href="register.html">Register here</a>
-            <a href="forgotten-password.html">Forgotten password</a>
-        </p>
+        <p>Don’t have an account? <a href="register.html">Register here</a></p>
     </div>
 
+    <!-- Customer Care Section -->
     <div class="support">
         <h2>Need Help?</h2>
         <p>Our customer care is available 24/7. Reach us anytime:</p>
@@ -203,93 +198,24 @@
         <a href="https://wa.me/qr/FDKDUI5V625OE1">💬 Live Chat</a>
     </div>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    <script>
+        function loginUser(event) {
+            event.preventDefault();
+            let email = document.getElementById("email").value;
+            let password = document.getElementById("password").value;
 
-        // 🔥 Replace with your Firebase Config
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+            let users = JSON.parse(localStorage.getItem("users")) || [];
+            let user = users.find(u => u.email === email && u.password === password);
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        const loginForm = document.getElementById("loginForm");
-        const alertBox = document.getElementById("alertMsg");
-
-        function showAlert(msg, color = "red") {
-            alertBox.style.display = "block";
-            alertBox.style.background = color === "red" ? "rgba(239, 68, 68, 0.9)" : "rgba(34, 197, 94, 0.9)";
-            alertBox.textContent = msg;
-            setTimeout(() => alertBox.style.display = "none", 2500);
-        }
-
-        loginForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value.trim();
-
-            if (!email || !password) return showAlert("❌ Please enter email and password.");
-
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    localStorage.setItem("currentUser", JSON.stringify(userData));
-                    showAlert("✅ Login successful! Redirecting...", "green");
-
-                    setTimeout(() => {
-                        if (userData.accountType === "seller" || userData.role === "admin") {
-                            window.location.href = "dashboard-admin.html";
-                        } else {
-                            window.location.href = "index.html";
-                        }
-                    }, 1200);
-                } else {
-                    showAlert("⚠️ No user data found in Firestore.");
-                }
-
-            } catch (error) {
-                console.error(error);
-                showAlert("❌ Invalid email or password.");
+            if (user) {
+                localStorage.setItem("currentUser", JSON.stringify(user));
+                alert("✅ Login successful! Redirecting to home...");
+                window.location.href = "index.html"; // redirect to homepage instead of dashboard
+            } else {
+                alert("❌ Invalid email or password. Please try again.");
             }
-        });
+        }
     </script>
-    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
 
 </html>

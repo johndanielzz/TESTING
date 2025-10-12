@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
     <meta charset="UTF-8">
@@ -8,156 +20,135 @@
     <link rel="stylesheet" href="style.css">
     <style>
         body {
-            font-family: "Poppins", Arial, sans-serif;
-            background: #0f172a;
-            color: #fff;
             margin: 0;
-            padding: 0;
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         header {
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-            flex-wrap: wrap;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .logo {
+        header .logo {
             font-size: 1.6rem;
             font-weight: bold;
             color: #06b6d4;
-            text-shadow: 0 0 8px #06b6d4;
+            text-shadow: 0 0 10px #4f46e5;
         }
 
         nav a {
+            margin: 0 10px;
             color: #fff;
-            margin: 5px 10px;
             text-decoration: none;
-            font-weight: 500;
             transition: 0.3s;
         }
 
-        nav a.active,
         nav a:hover {
             color: #06b6d4;
         }
 
-        h2 {
-            text-align: center;
-            margin: 25px 0;
-            color: #06b6d4;
-            text-shadow: 0 0 8px #06b6d4;
-        }
-
-        .filter-bar {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .filter-bar input,
-        .filter-bar select {
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            margin: 0 5px;
-            font-size: 0.95rem;
-        }
-
-        .filter-bar button {
-            padding: 10px 16px;
-            border-radius: 8px;
-            border: none;
-            background: #06b6d4;
-            color: #fff;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .filter-bar button:hover {
-            background: #4f46e5;
-        }
-
         .shop-container {
-            width: 90%;
-            max-width: 1100px;
-            margin: 0 auto;
+            flex: 1;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            text-shadow: 0 0 12px #06b6d4, 0 0 20px #4f46e5;
+        }
+
+        .product-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 20px;
         }
 
         .product-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
             padding: 15px;
             text-align: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
-            transition: 0.3s;
-            display: flex;
-            flex-direction: column;
-            min-height: 320px;
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
         }
 
         .product-card:hover {
-            transform: scale(1.03);
+            transform: scale(1.05);
+            box-shadow: 0 0 25px #06b6d4;
         }
 
         .product-card img {
             width: 100%;
             height: 180px;
             object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
         }
 
         .product-card h3 {
-            margin: 6px 0;
+            margin: 8px 0;
+            font-size: 1.1rem;
         }
 
         .product-card p {
-            color: #ccc;
-            font-size: 0.9rem;
-            margin: 3px 0;
+            color: #06b6d4;
+            font-weight: bold;
         }
 
-        .product-price {
-            margin-top: auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .price {
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .small-btn {
-            padding: 8px 10px;
-            border-radius: 8px;
-            background: #06b6d4;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .small-btn:hover {
+        .btn {
             background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 5px;
+            cursor: pointer;
+            transition: 0.3s;
         }
 
-        .empty {
+        .btn:hover {
+            background: #06b6d4;
+        }
+
+        .empty-msg {
             text-align: center;
-            color: #aaa;
-            margin: 40px 0;
+            font-size: 1.2rem;
+            padding: 20px;
+            color: #ccc;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
@@ -168,106 +159,75 @@
         <nav>
             <a href="index.html">Home</a>
             <a href="shop.html" class="active">Shop</a>
+            <a href="seller-login.html">Sellers</a>
             <a href="cart.html">Cart</a>
             <a href="chat.html">Chat</a>
         </nav>
     </header>
 
-    <h2>🛍️ Available Products</h2>
-
-    <div class="filter-bar">
-        <input type="text" id="searchInput" placeholder="Search products..." />
-        <select id="categoryFilter">
-            <option value="">All Categories</option>
-            <option value="electronics">Electronics</option>
-            <option value="fashion">Fashion</option>
-            <option value="gaming">Gaming</option>
-            <option value="home">Home & Living</option>
-        </select>
-        <button onclick="applyFilter()">Filter</button>
+    <div class="shop-container">
+        <h1>🛍️ Welcome to MatrixMarket Shop</h1>
+        <div id="productList" class="product-grid"></div>
     </div>
 
-    <div class="shop-container" id="shopContainer">
-        <p class="empty">Loading products...</p>
-    </div>
+    <footer>
+        <p>© 2025 MatrixMarket | Shop</p>
+    </footer>
 
     <script>
-        function getProducts() {
-            return JSON.parse(localStorage.getItem("products") || "[]");
-        }
+        function loadProducts() {
+            let products = JSON.parse(localStorage.getItem("products")) || [];
+            let productList = document.getElementById("productList");
+            productList.innerHTML = "";
 
-        function renderProducts(filterText = '', filterCategory = '') {
-            const container = document.getElementById("shopContainer");
-            const products = getProducts();
-
-            const filtered = products.filter(p => {
-                const matchesText = !filterText || (p.name && p.name.toLowerCase().includes(filterText.toLowerCase()));
-                const matchesCat = !filterCategory || p.category === filterCategory;
-                return matchesText && matchesCat;
-            });
-
-            container.innerHTML = '';
-            if (!filtered.length) {
-                container.innerHTML = '<p class="empty">No products found.</p>';
+            if (products.length === 0) {
+                productList.innerHTML = "<p class='empty-msg'>🚀 No products yet. Sellers will upload soon.</p>";
                 return;
             }
 
-            filtered.forEach(product => {
-                const div = document.createElement('div');
-                div.className = 'product-card';
+            products.forEach((p) => {
+                let div = document.createElement("div");
+                div.classList.add("product-card");
                 div.innerHTML = `
-          <img src="${product.image || 'https://via.placeholder.com/200x180'}" alt="${product.name}">
-          <h3>${product.name}</h3>
-          <p>${product.description || ''}</p>
-          <p>Seller: ${product.sellerEmail || 'Unknown'}</p>
-          <div class="product-price">
-            <span class="price">${parseFloat(product.price).toFixed(2)} GMD</span>
-            <button class="small-btn" onclick='addToCart(${JSON.stringify(product)})'>Add</button>
-          </div>
-        `;
-                container.appendChild(div);
+                    <img src="${p.image || 'placeholder.png'}" alt="${p.name || 'Product'}">
+                    <h3>${p.name}</h3>
+                    <p><strong>${p.price} GMD</strong></p>
+                    <button class="btn" onclick="addToCart('${p.name}', ${p.price}, '${p.image}', '${p.seller}')">🛒 Add to Cart</button>
+                    <button class="btn" onclick="buyNow('${p.name}', ${p.price}, '${p.image}', '${p.seller}')">💳 Buy Now</button>
+                    <button class="btn" onclick="startChat('${p.seller}')">💬 Chat</button>
+                `;
+                productList.appendChild(div);
             });
         }
 
-        function addToCart(product) {
-            let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-            const existing = cart.find(p => p.name === product.name && p.sellerEmail === product.sellerEmail);
-            if (existing) existing.quantity = (existing.quantity || 1) + 1;
-            else cart.push({ ...product, quantity: 1 });
-            localStorage.setItem("cart", JSON.stringify(cart));
-            alert(`✅ "${product.name}" added to cart!`);
+        function addToCart(name, price, image, seller) {
+            let cart = JSON.parse(localStorage.getItem("cartItems")) || [];
+            // prevent duplicate entries
+            let exists = cart.find(item => item.name === name && item.seller === seller);
+            if (!exists) {
+                cart.push({ name, price, image, seller });
+                localStorage.setItem("cartItems", JSON.stringify(cart));
+                alert(`${name} added to cart!`);
+            } else {
+                alert(`${name} is already in your cart.`);
+            }
         }
 
-        function applyFilter() {
-            const text = document.getElementById("searchInput").value;
-            const category = document.getElementById("categoryFilter").value;
-            renderProducts(text, category);
+        function buyNow(name, price, image, seller) {
+            addToCart(name, price, image, seller);
+            window.location.href = "checkout.html";
         }
 
-        window.addEventListener('load', () => renderProducts());
-        window.addEventListener('storage', () => renderProducts());
+        function startChat(seller) {
+            let chats = JSON.parse(localStorage.getItem("chats")) || {};
+            if (!chats[seller]) chats[seller] = [];
+            localStorage.setItem("chats", JSON.stringify(chats));
+            localStorage.setItem("chatWith", seller);
+            window.location.href = "chat.html";
+        }
+
+        window.onload = loadProducts;
     </script>
-       <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
 
 </html>

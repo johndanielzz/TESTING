@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+  // Set this to your backend URL
+  // For local testing:
+  const API_BASE = "http://localhost:4000/api";
+  // For live online use:
+  // const API_BASE = "https://your-backend-domain.com/api";
+
+  // Retrieve token (for logged-in user/admin)
+  function getToken() {
+    return localStorage.getItem("mm_token");
+  }
+</script>
 
 <head>
   <meta charset="UTF-8">
@@ -10,79 +22,49 @@
     body {
       font-family: "Poppins", sans-serif;
       background: #0f172a;
-      color: #fff;
+      color: white;
       margin: 0;
       padding: 0;
     }
 
     header {
-      background: rgba(0, 0, 0, 0.85);
+      background: #1e1e1e;
+      padding: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 15px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-      flex-wrap: wrap;
-    }
-
-    .logo {
-      font-size: 1.6rem;
-      font-weight: bold;
-      color: #06b6d4;
-      text-shadow: 0 0 8px #06b6d4;
     }
 
     nav a {
-      color: #fff;
+      color: white;
       margin: 0 10px;
       text-decoration: none;
-      font-weight: 500;
-      transition: 0.3s;
-    }
-
-    nav a:hover,
-    nav a.active {
-      color: #06b6d4;
-    }
-
-    #userBalanceHeader {
-      margin-left: 15px;
-      color: #06b6d4;
-      font-weight: bold;
     }
 
     h2 {
       text-align: center;
-      margin: 25px 0;
+      margin: 20px 0;
       color: #06b6d4;
-      text-shadow: 0 0 6px #06b6d4;
     }
 
     .container {
       width: 90%;
-      max-width: 900px;
+      max-width: 850px;
       margin: auto;
       background: rgba(255, 255, 255, 0.05);
       border-radius: 12px;
-      padding: 25px;
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
     }
 
     .section {
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     .cart-item {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 6px;
+      margin-bottom: 10px;
     }
 
     .checkout-btn {
@@ -91,7 +73,7 @@
       background: #06b6d4;
       border: none;
       border-radius: 10px;
-      color: #fff;
+      color: white;
       font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
@@ -108,8 +90,6 @@
       padding: 12px;
       border-radius: 10px;
       display: none;
-      text-align: center;
-      font-weight: bold;
     }
 
     .success {
@@ -120,13 +100,6 @@
     .error {
       background: rgba(239, 68, 68, 0.2);
       color: #ef4444;
-    }
-
-    @media (max-width: 600px) {
-      .cart-item {
-        flex-direction: column;
-        gap: 8px;
-      }
     }
   </style>
 </head>
@@ -140,7 +113,6 @@
       <a href="shop.html">Shop</a>
       <a href="cart.html">Cart</a>
       <a href="chat.html">Chat</a>
-      <span id="userBalanceHeader">Balance: 0 GMD</span>
     </nav>
   </header>
 
@@ -159,7 +131,7 @@
       <p>Loading info...</p>
     </div>
 
-    <!-- Wallet Info -->
+    <!-- Balance -->
     <div class="section" id="walletInfo">
       <h3>💰 Your Balance</h3>
       <p>Loading...</p>
@@ -176,50 +148,40 @@
     let total = 0;
     let balance = 0;
 
-    function getCurrentUser() {
-      return JSON.parse(localStorage.getItem("currentUser") || "null");
-    }
-
-    function updateHeaderBalance() {
-      const user = getCurrentUser();
-      balance = parseFloat(user?.balance || 0);
-      document.getElementById("userBalanceHeader").textContent = `Balance: ${balance.toFixed(2)} GMD`;
-    }
-
-    function renderCheckout() {
-      updateHeaderBalance();
-
-      const buyerInfo = JSON.parse(localStorage.getItem("buyerInfo")) || null;
-      const cartItems = JSON.parse(localStorage.getItem("checkoutCart")) || [];
+    function loadCheckout() {
+      balance = parseFloat(localStorage.getItem("userBalance")) || 0;
+      let buyerInfo = JSON.parse(localStorage.getItem("buyerInfo")) || null;
+      let cartItems = JSON.parse(localStorage.getItem("checkoutCart")) || [];
 
       const orderContainer = document.getElementById("orderSummary");
       const deliveryContainer = document.getElementById("deliveryInfo");
       const walletContainer = document.getElementById("walletInfo");
 
       if (!buyerInfo || cartItems.length === 0) {
-        orderContainer.innerHTML = "<p>No items in your cart. Please add products first.</p>";
-        deliveryContainer.innerHTML = "";
-        walletContainer.innerHTML = "";
+        orderContainer.innerHTML = "<p>No order found. Please go back to cart.</p>";
         return;
       }
 
-      checkoutDetails = { ...buyerInfo, cart: cartItems };
+      checkoutDetails = {
+        fullName: buyerInfo.name,
+        address: buyerInfo.address,
+        phone: buyerInfo.phone,
+        email: buyerInfo.email,
+        cart: cartItems
+      };
 
-      // Render order summary
-      total = 0;
       orderContainer.innerHTML = "<h3>🛒 Order Review</h3>";
+      total = 0;
       cartItems.forEach(item => {
-        const itemTotal = parseFloat(item.price) * (item.quantity || 1);
-        total += itemTotal;
+        total += parseFloat(item.price);
         orderContainer.innerHTML += `
           <div class="cart-item">
-            <span>${item.name}<br><small>Seller: ${item.sellerEmail || item.sellerName || 'N/A'}<br>Phone: ${item.sellerPhone || 'N/A'}</small></span>
-            <strong>${itemTotal.toFixed(2)} GMD</strong>
+            <span>${item.name} <br><small>Seller: ${item.seller}</small></span>
+            <strong>${item.price} GMD</strong>
           </div>`;
       });
       orderContainer.innerHTML += `<hr><p><b>Total:</b> ${total.toFixed(2)} GMD</p>`;
 
-      // Render delivery info
       deliveryContainer.innerHTML = `
         <h3>📦 Delivery Information</h3>
         <p><b>Name:</b> ${buyerInfo.name}</p>
@@ -227,91 +189,67 @@
         <p><b>Phone:</b> ${buyerInfo.phone}</p>
         <p><b>Email:</b> ${buyerInfo.email}</p>`;
 
-      // Render wallet info
-      walletContainer.innerHTML = `<h3>💰 Your Balance</h3><p><b>Balance:</b> ${balance.toFixed(2)} GMD</p>`;
+      walletContainer.innerHTML = `
+        <h3>💰 Your Balance</h3>
+        <p><b>Balance:</b> ${balance.toFixed(2)} GMD</p>`;
     }
 
     function placeOrder() {
       const errorMsg = document.getElementById("errorMsg");
       const successMsg = document.getElementById("successMsg");
-      errorMsg.style.display = successMsg.style.display = "none";
+
+      errorMsg.style.display = "none";
+      successMsg.style.display = "none";
 
       if (!checkoutDetails) {
-        errorMsg.textContent = "⚠️ No checkout details available.";
+        errorMsg.innerText = "⚠️ No checkout details found.";
         errorMsg.style.display = "block";
         return;
       }
 
       if (balance < total) {
-        errorMsg.textContent = "⚠️ Insufficient balance. Please top up your account.";
+        errorMsg.innerText = "⚠️ Insufficient balance. Please top up your account.";
         errorMsg.style.display = "block";
         return;
       }
 
-      // Deduct total from user's balance
-      const user = getCurrentUser();
-      user.balance = (parseFloat(user.balance) - total).toFixed(2);
-      localStorage.setItem("currentUser", JSON.stringify(user));
-      balance = parseFloat(user.balance);
-      updateHeaderBalance();
+      balance -= total;
+      localStorage.setItem("userBalance", balance);
+      localStorage.setItem("paymentStatus", "pending");
 
-      // Save seller balances & orders
       let sellers = JSON.parse(localStorage.getItem("sellers")) || {};
       checkoutDetails.cart.forEach(item => {
-        const key = item.sellerEmail || item.sellerName || 'unknown';
-        if (!sellers[key]) sellers[key] = { balance: 0, orders: [] };
-        const itemTotal = parseFloat(item.price) * (item.quantity || 1);
-        sellers[key].balance += itemTotal;
-        sellers[key].orders.push({
-          buyer: checkoutDetails.name,
+        if (!sellers[item.seller]) sellers[item.seller] = { balance: 0, orders: [] };
+        sellers[item.seller].balance += parseFloat(item.price);
+        sellers[item.seller].orders.push({
+          buyer: checkoutDetails.fullName,
           address: checkoutDetails.address,
           phone: checkoutDetails.phone,
           item: item.name,
-          amount: itemTotal,
+          amount: item.price,
           status: "pending",
           date: new Date().toLocaleString()
         });
       });
       localStorage.setItem("sellers", JSON.stringify(sellers));
 
-      // Save buyer orders
-      let buyerOrders = JSON.parse(localStorage.getItem("buyerOrders")) || [];
-      buyerOrders.push({ ...checkoutDetails, total, status: "pending", placedAt: new Date().toISOString() });
-      localStorage.setItem("buyerOrders", JSON.stringify(buyerOrders));
+      let orders = JSON.parse(localStorage.getItem("buyerOrders")) || [];
+      orders.push({
+        ...checkoutDetails,
+        total: total,
+        status: "pending",
+        placedAt: new Date().toISOString()
+      });
+      localStorage.setItem("buyerOrders", JSON.stringify(orders));
 
       successMsg.style.display = "block";
-
-      // Redirect to order-reciept.html after 2 seconds
       setTimeout(() => {
-        window.location.href = "order-reciept.html";
+        window.location.href = "payment-accept-decline-users.html";
       }, 2000);
     }
 
-    // Initialize page
-    window.onload = renderCheckout;
-    window.addEventListener("storage", updateHeaderBalance);
+    window.onload = loadCheckout;
   </script>
-<script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-<script src="./firebase.js"></script>
-<script src="./admin.js"></script>
-<script src="./assigned-code.js"></script>
-<script src="./auth.js"></script>
-<script src="./codeGen.js"></script>
-<script src="./db.js"></script>
-<script src="./message.js"></script>
-<script src="./order.js"></script>
-<script src="./product.js"></script>
-<script src="./script.js"></script>
-<script src="./seed.js"></script>
-<script src="./seller.js"></script>
-<script src="./server.js"></script>
-<script src="./user.js"></script>
-<script src="./routes/admin.js"></script>
-<script src="./routes/auth.js"></script>
-<script src="./routes/messages.js"></script>
-<script src="./routes/orders.js"></script>
-<script src="./routes/payments.js"></script>
-<script src="./routes/products.js"></script>
 </body>
 
 </html>

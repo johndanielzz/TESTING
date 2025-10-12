@@ -1,14 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
+<script>
+    async function loadOverview() {
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/admin/overview`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("userCount").textContent = data.stats.usersCount;
+        document.getElementById("productCount").textContent = data.stats.productsCount;
+        document.getElementById("sellerCount").textContent = data.stats.sellersCount;
+
+        const recentContainer = document.getElementById("recentProducts");
+        data.recentProducts.forEach(p => {
+            const li = document.createElement("li");
+            li.textContent = p.title + " (" + p.seller?.shopName + ")";
+            recentContainer.appendChild(li);
+        });
+    }
+
+    window.addEventListener("DOMContentLoaded", loadOverview);
+</script>
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MatrixMarket Admin - Manage Payments</title>
     <style>
-        /* ==============================
-   Global Styles
-============================== */
         body {
             font-family: "Poppins", sans-serif;
             background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
@@ -32,15 +63,6 @@
             }
         }
 
-        a {
-            text-decoration: none;
-            color: inherit;
-            transition: 0.3s;
-        }
-
-        /* ==============================
-   Header
-============================== */
         header {
             background: rgba(0, 0, 0, 0.4);
             padding: 15px 25px;
@@ -49,22 +71,20 @@
             align-items: center;
             color: #06b6d4;
             font-weight: 600;
-            flex-wrap: wrap;
         }
 
         header a {
             color: #fff;
-            margin-left: 12px;
+            text-decoration: none;
             font-weight: 500;
+            transition: 0.3s;
+            margin-left: 12px;
         }
 
         header a:hover {
             color: #06b6d4;
         }
 
-        /* ==============================
-   Container
-============================== */
         .container {
             max-width: 1000px;
             margin: 40px auto;
@@ -72,7 +92,6 @@
             padding: 30px;
             border-radius: 15px;
             box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
-            overflow-x: auto;
         }
 
         h1 {
@@ -82,14 +101,10 @@
             text-shadow: 0 0 10px #06b6d4;
         }
 
-        /* ==============================
-   Table
-============================== */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            min-width: 600px;
         }
 
         th,
@@ -108,9 +123,6 @@
             background: rgba(255, 255, 255, 0.05);
         }
 
-        /* ==============================
-   Buttons
-============================== */
         .btn {
             padding: 8px 14px;
             border: none;
@@ -138,9 +150,6 @@
             background: #dc2626;
         }
 
-        /* ==============================
-   Status badges
-============================== */
         .status {
             padding: 6px 12px;
             border-radius: 6px;
@@ -169,9 +178,6 @@
             color: #cbd5e1;
         }
 
-        /* ==============================
-   Footer
-============================== */
         footer {
             text-align: center;
             padding: 20px;
@@ -179,83 +185,11 @@
             color: #cbd5e1;
             background: rgba(255, 255, 255, 0.08);
             margin-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* ==============================
-   Responsive
-============================== */
-        @media (max-width: 1024px) {
-            .container {
-                padding: 25px;
-            }
-
-            table {
-                min-width: 500px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            table {
-                min-width: 100%;
-            }
-
-            th,
-            td {
-                padding: 10px;
-                font-size: 0.85rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.6rem;
-            }
-
-            .btn {
-                padding: 6px 10px;
-                font-size: 0.8rem;
-            }
-
-            th,
-            td {
-                padding: 8px;
-                font-size: 0.75rem;
-            }
         }
     </style>
 </head>
 
 <body>
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-        const firebaseConfig = {
-            apiKey: "AIzaSyBZpLELrmplsK66YNPycGLO2Aab9jvxa9k",
-            authDomain: "matrixmarketpace.firebaseapp.com",
-            projectId: "matrixmarketpace",
-            storageBucket: "matrixmarketpace.firebasestorage.app",
-            messagingSenderId: "200867795667",
-            appId: "1:200867795667:web:64de1ece48ddc07fa4ba26",
-            measurementId: "G-10TFPP3LDD"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-    </script>
     <header>
         <div>💼 MatrixMarket Admin</div>
         <nav>
@@ -305,6 +239,7 @@
 
             payments.forEach((p, i) => {
                 const row = document.createElement("tr");
+
                 row.innerHTML = `
           <td>${p.name}</td>
           <td>${p.email}</td>
@@ -314,8 +249,10 @@
           <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
           <td>
             ${p.status === "Pending"
-                        ? `<button class="btn accept" onclick="updatePayment(${i}, 'Approved')">Accept</button>
-                   <button class="btn decline" onclick="updatePayment(${i}, 'Declined')">Decline</button>`
+                        ? `
+              <button class="btn accept" onclick="updatePayment(${i}, 'Approved')">Accept</button>
+              <button class="btn decline" onclick="updatePayment(${i}, 'Declined')">Decline</button>
+              `
                         : "-"
                     }
           </td>
@@ -332,6 +269,7 @@
             userPayments.status = newStatus;
             localStorage.setItem("pendingRequests", JSON.stringify(payments));
 
+            // Update user's own record
             const userDataKeys = ["currentUser", "currentSeller", "loggedInUser", "user"];
             for (const key of userDataKeys) {
                 const storedUser = JSON.parse(localStorage.getItem(key));
@@ -347,28 +285,6 @@
 
         window.onload = loadPayments;
     </script>
-    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
-    
 </body>
 
 </html>

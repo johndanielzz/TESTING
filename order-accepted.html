@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
     <meta charset="UTF-8">
@@ -78,27 +90,6 @@
         <a href="shop.html" class="btn">🛍 Continue Shopping</a>
         <a href="buyer-orders.html" class="btn">📦 View My Orders</a>
     </div>
-    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
 
 </html>

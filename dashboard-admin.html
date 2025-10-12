@@ -1,5 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
+<script>
+    async function loadOverview() {
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/admin/overview`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("userCount").textContent = data.stats.usersCount;
+        document.getElementById("productCount").textContent = data.stats.productsCount;
+        document.getElementById("sellerCount").textContent = data.stats.sellersCount;
+
+        const recentContainer = document.getElementById("recentProducts");
+        data.recentProducts.forEach(p => {
+            const li = document.createElement("li");
+            li.textContent = p.title + " (" + p.seller?.shopName + ")";
+            recentContainer.appendChild(li);
+        });
+    }
+
+    window.addEventListener("DOMContentLoaded", loadOverview);
+</script>
 
 <head>
     <meta charset="UTF-8">
@@ -121,7 +155,6 @@
             margin-top: 10px;
             transition: 0.3s;
             font-weight: bold;
-            cursor: pointer;
         }
 
         .btn:hover {
@@ -174,19 +207,13 @@
             <a href="dashboard-admin.html">Dashboard</a>
             <a href="admin-sellers.html">Sellers</a>
             <a href="admin-users.html">Users</a>
-            <a href="admin-accept-payment.html">Payments</a>
-            <a href="admin-edit-user-seller.html">Edit</a>
-            <a href="admin-code.html">Codes</a>
-            <a href="#" onclick="logout()">Logout</a>
+            <a href="admin-accept-payment.html">Accept payment</a>
+<a href="admin-edit-user-seller.html">Edit</a>
         </nav>
     </header>
 
     <div class="container">
         <h1>📊 Admin Control Dashboard</h1>
-        <div style="text-align:center;">
-            <button class="btn" onclick="loadDashboard()">🔄 Refresh</button>
-        </div>
-
         <div class="stats">
             <div class="card">
                 <h2 id="totalUsers">0</h2>
@@ -216,35 +243,10 @@
     <footer>© 2025 MatrixMarket | Admin Dashboard</footer>
 
     <script>
-        // -----------------------
-        // SECURE DASHBOARD ACCESS
-        // -----------------------
-        const TOKEN_KEY = "adminToken";
-        const HARD_CODED_TOKEN = "hardcoded-admin-token";
-
-        function checkAccess() {
-            const token = localStorage.getItem(TOKEN_KEY);
-            if (token !== HARD_CODED_TOKEN) {
-                alert("Access denied. Please login first.");
-                window.location.href = "admin-login.html";
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem(TOKEN_KEY);
-            window.location.href = "admin-login.html";
-        }
-
-        checkAccess(); // Check access immediately on page load
-
-        // -----------------------
-        // DASHBOARD DATA LOGIC
-        // -----------------------
-        const users = JSON.parse(localStorage.getItem("users")) || [];
-        const sellers = JSON.parse(localStorage.getItem("sellers")) || [];
-
         function loadDashboard() {
-            // Stats
+            const users = JSON.parse(localStorage.getItem("users")) || [];
+            const sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+
             document.getElementById("totalUsers").textContent = users.length;
             document.getElementById("totalSellers").textContent = sellers.length;
 
@@ -266,16 +268,18 @@
           <th>Email</th>
           <th>Status</th>
           <th>Country</th>
-        </tr>`;
+        </tr>
+      `;
 
-            if (!list || list.length === 0) {
+            if (list.length === 0) {
                 table.innerHTML += `<tr><td colspan="4">No ${type.toLowerCase()} records found.</td></tr>`;
                 return;
             }
 
             list.slice(-5).reverse().forEach(item => {
-                const statusClass = item.status === "Approved" ? "approved" :
-                    item.status === "Declined" ? "declined" : "pending";
+                const statusClass =
+                    item.status === "Approved" ? "approved" :
+                        item.status === "Declined" ? "declined" : "pending";
 
                 table.innerHTML += `
           <tr>
@@ -283,33 +287,28 @@
             <td>${item.email || "N/A"}</td>
             <td class="${statusClass}">${item.status || "Pending"}</td>
             <td>${item.country || "Unknown"}</td>
-          </tr>`;
+          </tr>
+        `;
             });
         }
 
         window.onload = loadDashboard;
     </script>
-    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
+<script>
+    async function fetchAdminOverview() {
+        const token = localStorage.getItem('mm_token');
+        const res = await fetch(`${API_BASE}/admin/overview`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+            // handle unauthorized or forbidden
+            const err = await res.json();
+            throw new Error(err.message || 'Error');
+        }
+        return await res.json();
+    }
+</script>
+
 
 </html>

@@ -1,40 +1,101 @@
-// routes/admin.js
 const express = require('express');
-const PaymentRequest = require('../models/PaymentRequest');
-const Seller = require('../seller');
-const AssignedCode = require('../models/AssignedCode');
 const auth = require('../middleware/auth');
+const User = require('../models/User');
+const Product = require('../models/Product');
+const Seller = require('../models/Seller');
 
 const router = express.Router();
 
-/** NOTE: in production wrap with admin middleware after validating JWT with admin role */
+// =========================
+// GET /api/admin/overview
+// =========================
+// Protected: admin only
+router.get('/overview', auth('admin'), async (req, res) => {
+  try {
+    const [usersCount, productsCount, sellersCount, recentProducts] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments(),
+      Seller.countDocuments(),
+      Product.find().sort({ createdAt: -1 }).limit(20).populate('seller', 'shopName')
+    ]);
 
-/** list pending requests */
-router.get('/pending-requests', async (req, res) => {
-  const list = await PaymentRequest.find({}).sort({ date: -1 }).limit(200);
-  res.json(list);
+    res.json({
+      success: true,
+      stats: {
+        usersCount,
+        productsCount,
+        sellersCount
+      },
+      recentProducts
+    });
+  } catch (err) {
+    console.error('Error fetching admin overview:', err);
+    res.status(500).json({ success: false, message: 'Server error while fetching overview' });
+  }
 });
 
-/** list all sellers */
-router.get('/sellers', async (req, res) => {
-  const sellers = await Seller.find({}).sort({ createdAt: -1 });
-  res.json(sellers);
+// =========================
+// GET /api/admin/users
+// =========================
+router.get('/users', auth('admin'), async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('-passwordHash')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, users });
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ success: false, message: 'Server error while fetching users' });
+  }
 });
 
-/** get seller login credentials (for admin view) */
-router.get('/seller/:email/credentials', async (req, res) => {
-  const email = req.params.email;
-  const seller = await Seller.findOne({ email });
-  if (!seller) return res.status(404).json({ message: 'Seller not found' });
+// =========================
+// GET /api/admin/products
+// =========================
+router.get('/products', auth('admin'), async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate('seller', 'shopName')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, products });
+  } catch (err) {
+    console.error('Error fetching products:', err);
+    res.status(500).json({ success: false, message: 'Server error while fetching products' });
+  }
+});
 
-  // DON'T return raw password in production — this is only because you requested to view login code & password.
-  // If hashed password stored, we cannot reveal it. If you want plain password you must store plaintext (not recommended).
-  res.json({
-    email: seller.email,
-    code: seller.code || null,
-    // Password is stored hashed — we will **not** return hashed password. You can implement password reset instead.
-    passwordResetTokenAvailable: true
-  });
+// =========================
+// PUT /api/admin/user/:id/role
+// =========================
+router.put('/user/:id/role', auth('admin'), async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!role) {
+      return res.status(400).json({ success: false, message: 'Role is required' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `User role updated to '${role}'`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Error changing user role:', err);
+    res.status(500).json({ success: false, message: 'Server error while updating user role' });
+  }
 });
 
 module.exports = router;

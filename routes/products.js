@@ -1,40 +1,63 @@
-// routes/admin.js
 const express = require('express');
-const PaymentRequest = require('../models/PaymentRequest');
-const Seller = require('../seller');
-const AssignedCode = require('../models/AssignedCode');
+const Product = require('../models/Product');
+const Seller = require('../models/Seller');
 const auth = require('../middleware/auth');
-
 const router = express.Router();
 
-/** NOTE: in production wrap with admin middleware after validating JWT with admin role */
-
-/** list pending requests */
-router.get('/pending-requests', async (req, res) => {
-  const list = await PaymentRequest.find({}).sort({ date: -1 }).limit(200);
-  res.json(list);
+// Public: fetch products (with filters)
+router.get('/', async (req, res) => {
+  try {
+    const { q, seller, archived } = req.query;
+    const filter = {};
+    if (q) filter.title = { $regex: q, $options: 'i' };
+    if (seller) filter.seller = seller;
+    if (archived !== undefined) filter.archived = archived === 'true';
+    const products = await Product.find(filter).populate('seller');
+    res.json(products);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
 });
 
-/** list all sellers */
-router.get('/sellers', async (req, res) => {
-  const sellers = await Seller.find({}).sort({ createdAt: -1 });
-  res.json(sellers);
+// Create product (seller)
+router.post('/', auth(), async (req, res) => {
+  try {
+    const { sellerId, title, description, price, images, quantity } = req.body;
+    if (!sellerId || !title) return res.status(400).json({ message: 'Missing fields' });
+
+    const seller = await Seller.findById(sellerId);
+    if (!seller) return res.status(400).json({ message: 'Seller not found' });
+
+    const p = new Product({ seller: sellerId, title, description, price, images, quantity });
+    await p.save();
+    res.json(p);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
 });
 
-/** get seller login credentials (for admin view) */
-router.get('/seller/:email/credentials', async (req, res) => {
-  const email = req.params.email;
-  const seller = await Seller.findOne({ email });
-  if (!seller) return res.status(404).json({ message: 'Seller not found' });
+// Update product (seller/admin)
+router.put('/:id', auth(), async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Not found' });
+    // Optionally check ownership if role !== admin
+    Object.assign(product, req.body);
+    await product.save();
+    res.json(product);
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
 
-  // DON'T return raw password in production — this is only because you requested to view login code & password.
-  // If hashed password stored, we cannot reveal it. If you want plain password you must store plaintext (not recommended).
-  res.json({
-    email: seller.email,
-    code: seller.code || null,
-    // Password is stored hashed — we will **not** return hashed password. You can implement password reset instead.
-    passwordResetTokenAvailable: true
-  });
+// Delete or archive
+router.delete('/:id', auth('admin'), async (req, res) => {
+  try {
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
 });
 
 module.exports = router;

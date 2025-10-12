@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
     <meta charset="UTF-8">
@@ -57,13 +69,12 @@
         }
 
         .container {
-            max-width: 1300px;
+            max-width: 1200px;
             margin: 40px auto;
             background: rgba(255, 255, 255, 0.08);
             padding: 30px;
             border-radius: 20px;
             box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
-            overflow-x: auto;
         }
 
         h1 {
@@ -84,7 +95,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1100px;
+            margin-top: 10px;
         }
 
         th,
@@ -92,7 +103,6 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 10px;
             text-align: center;
-            font-size: 0.95rem;
         }
 
         th {
@@ -168,13 +178,6 @@
             margin-top: 40px;
         }
 
-        .copy {
-            color: #06b6d4;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: underline;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -208,9 +211,8 @@
     </header>
 
     <div class="container">
-        <h1>🧾 Manage Sellers & Subscriptions</h1>
-        <input type="text" id="searchBox" placeholder="Search seller by name, email, or code..."
-            onkeyup="renderSellers()">
+        <h1>🧾 Manage Sellers & Payments</h1>
+        <input type="text" id="searchBox" placeholder="Search seller by name or email..." onkeyup="renderSellers()">
         <table id="sellerTable"></table>
     </div>
 
@@ -227,28 +229,23 @@
             const table = document.getElementById("sellerTable");
 
             const filtered = sellers.filter(s =>
-                s.email?.toLowerCase().includes(search) ||
-                s.name?.toLowerCase().includes(search) ||
-                s.code?.toLowerCase().includes(search)
+                s.email?.toLowerCase().includes(search) || s.name?.toLowerCase().includes(search)
             );
 
             table.innerHTML = `
         <tr>
           <th>Name</th>
           <th>Email</th>
-          <th>Code</th>
-          <th>Password</th>
           <th>Plan</th>
           <th>Store</th>
           <th>Status</th>
           <th>Proof</th>
-          <th>Subscription</th>
           <th>Action</th>
         </tr>
       `;
 
             if (filtered.length === 0) {
-                table.innerHTML += `<tr><td colspan="10">No sellers found.</td></tr>`;
+                table.innerHTML += `<tr><td colspan="7">No sellers found.</td></tr>`;
                 return;
             }
 
@@ -261,21 +258,14 @@
                     ? `<img src="${seller.proof}" class="proof" onclick="viewProof('${seller.proof}')">`
                     : "No proof";
 
-                const subStatus = seller.subscription || "Inactive";
-                const pass = seller.password ? seller.password : "-";
-                const code = seller.code ? seller.code : "-";
-
                 table.innerHTML += `
           <tr>
             <td>${seller.name || "-"}</td>
             <td>${seller.email}</td>
-            <td><span class="copy" onclick="copyText('${code}')">${code}</span></td>
-            <td><span class="copy" onclick="copyText('${pass}')">${pass}</span></td>
             <td>${seller.plan || "Free"}</td>
             <td>${seller.store || "N/A"}</td>
             <td><span class="status ${statusClass}">${seller.status || "Pending"}</span></td>
             <td>${proofHTML}</td>
-            <td>${subStatus}</td>
             <td>
               <button class="btn approve" onclick="approveSeller('${seller.email}')">Approve</button>
               <button class="btn decline" onclick="declineSeller('${seller.email}')">Decline</button>
@@ -283,11 +273,6 @@
           </tr>
         `;
             });
-        }
-
-        function copyText(text) {
-            navigator.clipboard.writeText(text);
-            alert("Copied: " + text);
         }
 
         function viewProof(src) {
@@ -304,12 +289,11 @@
                     s.status = "Approved";
                     s.paymentStatus = "Paid";
                     s.subscription = "Active";
-                    s.canLogin = true;
                 }
                 return s;
             });
             localStorage.setItem("sellers", JSON.stringify(sellers));
-            alert("✅ Seller approved — login enabled!");
+            alert("✅ Seller approved successfully!");
             renderSellers();
         }
 
@@ -320,38 +304,16 @@
                     s.status = "Declined";
                     s.paymentStatus = "Unpaid";
                     s.subscription = "Inactive";
-                    s.canLogin = false;
                 }
                 return s;
             });
             localStorage.setItem("sellers", JSON.stringify(sellers));
-            alert("❌ Seller declined — login disabled.");
+            alert("❌ Seller declined.");
             renderSellers();
         }
 
         window.onload = renderSellers;
     </script>
-     <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
 
 </html>

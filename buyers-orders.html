@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Orders - MatrixMarket</title>
     <link rel="stylesheet" href="style.css">
-
     <style>
         body {
             font-family: "Poppins", sans-serif;
@@ -18,42 +29,29 @@
 
         header {
             background: #1e1e1e;
-            padding: 15px 20px;
+            padding: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .logo {
-            font-weight: bold;
-            color: #06b6d4;
-            font-size: 1.5rem;
         }
 
         nav a {
             color: white;
-            margin: 5px 10px;
+            margin: 0 10px;
             text-decoration: none;
-            font-weight: 500;
-        }
-
-        nav a:hover {
-            color: #06b6d4;
         }
 
         h2 {
             text-align: center;
             margin: 20px 0;
             color: #06b6d4;
-            text-shadow: 0 0 8px #06b6d4;
         }
 
         .container {
             width: 90%;
             max-width: 900px;
             margin: auto;
-            padding: 20px 0;
+            padding: 20px;
         }
 
         .order {
@@ -71,13 +69,12 @@
 
         .order p {
             margin: 5px 0;
-            font-size: 0.95rem;
         }
 
         .status {
             padding: 6px 10px;
             border-radius: 8px;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: bold;
         }
 
@@ -96,14 +93,9 @@
             color: #ef4444;
         }
 
-        .problem {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
         .btn {
             display: inline-block;
-            margin: 10px 8px 0 0;
+            margin: 15px 10px 0 0;
             padding: 10px 18px;
             border: none;
             border-radius: 8px;
@@ -118,56 +110,11 @@
         .btn:hover {
             background: #4f46e5;
         }
-
-        ul {
-            margin: 5px 0 0 15px;
-            padding: 0;
-        }
-
-        li {
-            margin-bottom: 5px;
-        }
-
-        .item-img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-right: 10px;
-        }
-
-        .item-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        .status-buttons {
-            margin-top: 10px;
-        }
-
-        /* Responsive */
-        @media(max-width:600px) {
-
-            .order p,
-            .order h3 {
-                font-size: 0.9rem;
-            }
-
-            .btn {
-                font-size: 0.9rem;
-                padding: 8px 14px;
-            }
-
-            .item-img {
-                width: 50px;
-                height: 50px;
-            }
-        }
     </style>
 </head>
 
 <body>
+    <!-- Header -->
     <header>
         <div class="logo">MatrixMarket</div>
         <nav>
@@ -189,130 +136,36 @@
         <a href="index.html" class="btn">🏠 Back to Dashboard</a>
     </div>
 
-    <!-- Chat Box -->
-    <div class="chat-box" id="chatBox"
-        style="display:none; position:fixed; bottom:20px; right:20px; background: rgba(0,0,0,0.9); padding:15px; border-radius:12px; width:300px; flex-direction:column; box-shadow:0 0 15px rgba(6,182,212,0.5);">
-        <h4 id="chatTitle" style="color:#06b6d4; text-align:center; margin:0 0 10px 0;">Chat with Seller</h4>
-        <div class="messages" id="chatMessages"
-            style="height:200px; overflow-y:auto; background: rgba(255,255,255,0.1); border-radius:8px; padding:10px; margin-bottom:10px;">
-        </div>
-        <div style="display:flex;gap:5px;">
-            <input type="text" id="chatInput" placeholder="Type message...">
-            <button onclick="sendMessage()">Send</button>
-        </div>
-    </div>
-
     <script>
-        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-        let activeSeller = null;
-
         function loadOrders() {
             let orders = JSON.parse(localStorage.getItem("buyerOrders")) || [];
             const container = document.getElementById("ordersContainer");
 
             if (orders.length === 0) {
-                container.innerHTML = "<p style='text-align:center;'>No orders found. Start shopping now! 🛒</p>";
+                container.innerHTML = "<p>No orders found. Start shopping now! 🛒</p>";
                 return;
             }
 
             container.innerHTML = "";
             orders.reverse().forEach((order, index) => {
-                const itemsList = order.cart.map(i => `
-                    <div class="item-container">
-                        <img class="item-img" src="${i.image || 'https://via.placeholder.com/60'}" alt="${i.name}">
-                        <span>${i.name} - ${parseFloat(i.price).toFixed(2)} GMD (Seller: ${i.seller || 'N/A'})</span>
-                        <button class="btn" style="margin-left:auto; font-size:0.8rem;" onclick="openChat('${i.seller || ''}')">Chat</button>
-                    </div>`).join("");
+                let itemsList = order.cart.map(i => `<li>${i.name} - ${i.price} GMD (Seller: ${i.seller})</li>`).join("");
 
                 container.innerHTML += `
-                    <div class="order">
-                        <h3>Order #${orders.length - index}</h3>
-                        <p><b>Placed:</b> ${new Date(order.placedAt).toLocaleString()}</p>
-                        <p><b>Total:</b> ${parseFloat(order.total).toFixed(2)} GMD</p>
-                        <p><b>Delivery:</b> ${order.address}, ${order.phone}</p>
-                        <p><b>Status:</b> <span class="status ${order.status}">${order.status.toUpperCase()}</span></p>
-                        <p><b>Items:</b></p>
-                        ${itemsList}
-                        <div class="status-buttons">
-                            <button class="btn" onclick="updateStatus(${orders.length - index - 1}, 'completed')">Mark as Received ✅</button>
-                            <button class="btn" onclick="updateStatus(${orders.length - index - 1}, 'problem')">Report Problem ⚠️</button>
-                        </div>
-                    </div>`;
+          <div class="order">
+            <h3>Order #${orders.length - index}</h3>
+            <p><b>Placed:</b> ${new Date(order.placedAt).toLocaleString()}</p>
+            <p><b>Total:</b> ${order.total.toFixed(2)} GMD</p>
+            <p><b>Delivery:</b> ${order.address}, ${order.phone}</p>
+            <p><b>Status:</b> <span class="status ${order.status}">${order.status.toUpperCase()}</span></p>
+            <p><b>Items:</b></p>
+            <ul>${itemsList}</ul>
+          </div>
+        `;
             });
-        }
-
-        function openChat(sellerEmail) {
-            if (!sellerEmail) return;
-            activeSeller = sellerEmail;
-            document.getElementById("chatBox").style.display = "flex";
-            document.getElementById("chatTitle").textContent = `Chat with ${sellerEmail}`;
-            renderMessages();
-        }
-
-        function sendMessage() {
-            if (!activeSeller) return;
-            const input = document.getElementById("chatInput");
-            const msg = input.value.trim();
-            if (!msg) return;
-
-            const allChats = JSON.parse(localStorage.getItem("chats")) || [];
-            allChats.push({
-                seller: activeSeller,
-                buyer: currentUser.email,
-                sender: "buyer",
-                message: msg,
-                time: new Date().toISOString()
-            });
-            localStorage.setItem("chats", JSON.stringify(allChats));
-            input.value = "";
-            renderMessages();
-        }
-
-        function renderMessages() {
-            const chatMessages = document.getElementById("chatMessages");
-            const allChats = JSON.parse(localStorage.getItem("chats")) || [];
-            const msgs = allChats.filter(c => c.seller === activeSeller && c.buyer === currentUser.email);
-            chatMessages.innerHTML = "";
-            msgs.forEach(m => {
-                const div = document.createElement("div");
-                div.textContent = `${m.sender === "buyer" ? "You" : "Seller"}: ${m.message}`;
-                div.style.textAlign = m.sender === "buyer" ? "right" : "left";
-                div.style.marginBottom = "5px";
-                chatMessages.appendChild(div);
-            });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function updateStatus(orderIndex, newStatus) {
-            let orders = JSON.parse(localStorage.getItem("buyerOrders")) || [];
-            orders[orderIndex].status = newStatus;
-            localStorage.setItem("buyerOrders", JSON.stringify(orders));
-            loadOrders();
         }
 
         window.onload = loadOrders;
     </script>
-    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
 
 </html>

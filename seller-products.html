@@ -1,9 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>MatrixMarket - Seller Products</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             font-family: "Poppins", sans-serif;
@@ -18,14 +31,16 @@
         }
 
         @keyframes gradientBG {
-
-            0%,
-            100% {
+            0% {
                 background-position: 0% 50%;
             }
 
             50% {
                 background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
             }
         }
 
@@ -46,11 +61,10 @@
             text-decoration: none;
             margin: 0 10px;
             font-weight: bold;
-            transition: color 0.3s;
         }
 
         header a:hover {
-            color: #06b6d4;
+            text-decoration: underline;
         }
 
         .container {
@@ -118,15 +132,6 @@
 
         th {
             background: rgba(0, 0, 0, 0.3);
-            text-transform: uppercase;
-            color: #06b6d4;
-        }
-
-        img.product-img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
         }
 
         .actions button {
@@ -136,7 +141,6 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: 0.3s;
         }
 
         .edit {
@@ -149,16 +153,12 @@
             color: #fff;
         }
 
-        .chat {
-            background: #10b981;
-            color: #fff;
-        }
-
         footer {
             background: rgba(255, 255, 255, 0.08);
             text-align: center;
             padding: 15px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -168,30 +168,40 @@
         <h2>🛍️ Seller Dashboard</h2>
         <nav>
             <a href="seller-dashboard.html">Dashboard</a>
-            <a href="seller-products.html">My Products</a>
-            <a href="#" id="logoutBtn">Logout</a>
+            <a href="seller-product.html">My Products</a>
+            <a href="logout.html">Logout</a>
         </nav>
     </header>
 
     <div class="container">
-        <h3>Add / Edit Product</h3>
+        <h3>Add New Product</h3>
         <form id="productForm">
-            <input type="hidden" id="editIndex">
             <input type="text" id="name" placeholder="Product Name" required>
             <textarea id="description" rows="3" placeholder="Product Description" required></textarea>
             <input type="number" id="price" placeholder="Price (GMD)" required>
-            <input type="file" id="imageUpload" accept="image/*">
-            <button class="btn" type="submit">Save Product</button>
+            <input type="url" id="image" placeholder="Image URL (optional)">
+            <button class="btn" type="submit">Add Product</button>
         </form>
 
-        <h3>Your Products & Sales</h3>
-        <table id="productTable"></table>
+        <h3>Your Products</h3>
+        <table id="productTable">
+            <tr>
+                <th>Product</th>
+                <th>Description</th>
+                <th>Price (GMD)</th>
+                <th>Image</th>
+                <th>Actions</th>
+            </tr>
+        </table>
     </div>
 
-    <footer>© 2025 MatrixMarket | Seller Product Manager</footer>
+    <footer>
+        © 2025 MatrixMarket | Seller Product Manager
+    </footer>
 
     <script>
         const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+
         if (!currentUser || !currentUser.isSeller) {
             alert("Access denied. Sellers only.");
             window.location.href = "login.html";
@@ -199,89 +209,55 @@
 
         const form = document.getElementById("productForm");
         const table = document.getElementById("productTable");
-        const editIndex = document.getElementById("editIndex");
-        const nameInput = document.getElementById("name");
-        const descriptionInput = document.getElementById("description");
-        const priceInput = document.getElementById("price");
-        const imageUpload = document.getElementById("imageUpload");
-
-        let imageBase64 = "";
-
-        imageUpload.addEventListener("change", function () {
-            const file = this.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                imageBase64 = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
 
         form.addEventListener("submit", e => {
             e.preventDefault();
-
-            const name = nameInput.value.trim();
-            const description = descriptionInput.value.trim();
-            const price = parseFloat(priceInput.value.trim());
+            const name = document.getElementById("name").value.trim();
+            const description = document.getElementById("description").value.trim();
+            const price = parseFloat(document.getElementById("price").value.trim());
+            const image = document.getElementById("image").value.trim() || "https://via.placeholder.com/100";
 
             let allProducts = JSON.parse(localStorage.getItem("products")) || [];
 
-            if (editIndex.value) {
-                const index = parseInt(editIndex.value);
-                allProducts[index] = {
-                    ...allProducts[index],
-                    name, description, price,
-                    image: imageBase64 || allProducts[index].image
-                };
-                editIndex.value = "";
-                alert("✅ Product updated successfully!");
-            } else {
-                allProducts.push({
-                    name,
-                    description,
-                    price,
-                    image: imageBase64 || "https://via.placeholder.com/100",
-                    sellerEmail: currentUser.email,
-                    buyerEmail: "",
-                    buyerAddress: "",
-                    date: new Date().toISOString()
-                });
-                alert("✅ Product added successfully!");
-            }
+            allProducts.push({
+                name,
+                description,
+                price,
+                image,
+                sellerEmail: currentUser.email,
+                date: new Date().toISOString()
+            });
 
             localStorage.setItem("products", JSON.stringify(allProducts));
-            imageBase64 = "";
             form.reset();
             renderProducts();
+            alert("✅ Product added successfully!");
         });
 
         function renderProducts() {
-            const allProducts = JSON.parse(localStorage.getItem("products")) || [];
-            const myProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
+            let allProducts = JSON.parse(localStorage.getItem("products")) || [];
+            let sellerProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
 
             let rows = `
         <tr>
-          <th>Image</th>
           <th>Product</th>
           <th>Description</th>
           <th>Price (GMD)</th>
-          <th>Buyer</th>
-          <th>Address</th>
+          <th>Image</th>
           <th>Actions</th>
-        </tr>`;
+        </tr>
+      `;
 
-            if (myProducts.length === 0) {
-                rows += `<tr><td colspan="7" style="text-align:center;">No products yet.</td></tr>`;
+            if (sellerProducts.length === 0) {
+                rows += `<tr><td colspan="5" style="text-align:center;">No products yet.</td></tr>`;
             } else {
-                myProducts.forEach((p, i) => {
+                sellerProducts.forEach((p, i) => {
                     rows += `
             <tr>
-              <td><img src="${p.image}" alt="${p.name}" class="product-img"></td>
               <td>${p.name}</td>
               <td>${p.description}</td>
               <td>${p.price.toFixed(2)}</td>
-              <td>${p.buyerEmail || "—"}</td>
-              <td>${p.buyerAddress || "—"}</td>
+              <td><img src="${p.image}" width="60" style="border-radius:8px;"></td>
               <td class="actions">
                 <button class="edit" onclick="editProduct(${i})">Edit</button>
                 <button class="delete" onclick="deleteProduct(${i})">Delete</button>
@@ -289,59 +265,52 @@
             </tr>`;
                 });
             }
+
             table.innerHTML = rows;
         }
 
         function editProduct(index) {
-            const products = JSON.parse(localStorage.getItem("products")) || [];
-            const myProducts = products.filter(p => p.sellerEmail === currentUser.email);
-            const product = myProducts[index];
+            let allProducts = JSON.parse(localStorage.getItem("products")) || [];
+            let sellerProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
+            let product = sellerProducts[index];
             if (!product) return;
 
-            nameInput.value = product.name;
-            descriptionInput.value = product.description;
-            priceInput.value = product.price;
-            editIndex.value = index;
-            window.scrollTo(0, 0);
+            document.getElementById("name").value = product.name;
+            document.getElementById("description").value = product.description;
+            document.getElementById("price").value = product.price;
+            document.getElementById("image").value = product.image;
+
+            deleteProduct(index);
         }
 
         function deleteProduct(index) {
             let allProducts = JSON.parse(localStorage.getItem("products")) || [];
-            const myProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
-            const target = myProducts[index];
-            allProducts = allProducts.filter(p => !(p.sellerEmail === target.sellerEmail && p.name === target.name));
+            let sellerProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
+            let productToDelete = sellerProducts[index];
+
+            allProducts = allProducts.filter(p => !(p.sellerEmail === productToDelete.sellerEmail && p.name === productToDelete.name));
             localStorage.setItem("products", JSON.stringify(allProducts));
+
             renderProducts();
         }
 
-        document.getElementById("logoutBtn").onclick = () => {
-            localStorage.removeItem("currentUser");
-            window.location.href = "login.html";
-        };
-
         window.onload = renderProducts;
     </script>
-     <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
-    <script src="./firebase.js"></script>
-    <script src="./admin.js"></script>
-    <script src="./assigned-code.js"></script>
-    <script src="./auth.js"></script>
-    <script src="./codeGen.js"></script>
-    <script src="./db.js"></script>
-    <script src="./message.js"></script>
-    <script src="./order.js"></script>
-    <script src="./product.js"></script>
-    <script src="./script.js"></script>
-    <script src="./seed.js"></script>
-    <script src="./seller.js"></script>
-    <script src="./server.js"></script>
-    <script src="./user.js"></script>
-    <script src="./routes/admin.js"></script>
-    <script src="./routes/auth.js"></script>
-    <script src="./routes/messages.js"></script>
-    <script src="./routes/orders.js"></script>
-    <script src="./routes/payments.js"></script>
-    <script src="./routes/products.js"></script>
 </body>
+<script>
+    async function createProduct(productData) {
+        const token = localStorage.getItem('mm_token');
+        const res = await fetch(`${API_BASE}/products`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(productData)
+        });
+        return await res.json();
+    }
+</script>
+
 
 </html>
