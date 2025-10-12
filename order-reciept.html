@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatrixMarket - Order Receipt</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: #0f172a;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            flex-wrap: wrap;
+            color: #fff;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #06b6d4;
+        }
+
+        nav a {
+            color: #fff;
+            margin: 0 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: #06b6d4;
+        }
+
+        #userBalanceHeader {
+            margin-left: 15px;
+            color: #06b6d4;
+            font-weight: bold;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 25px 0;
+            color: #06b6d4;
+            text-shadow: 0 0 6px #06b6d4;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            color: #000;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            border-bottom: 1px dashed #aaa;
+            padding-bottom: 6px;
+        }
+
+        .total {
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .thankyou {
+            text-align: center;
+            color: #22c55e;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .download-btn {
+            display: block;
+            margin: 20px auto 0 auto;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background: #06b6d4;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .download-btn:hover {
+            background: #4f46e5;
+        }
+
+        @media (max-width: 600px) {
+            .cart-item {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .total {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">MatrixMarket</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="cart.html">Cart</a>
+            <a href="chat.html">Chat</a>
+            <span id="userBalanceHeader">Balance: 0 GMD</span>
+        </nav>
+    </header>
+
+    <h2>🧾 Order Receipt</h2>
+
+    <div class="container" id="receiptContainer">
+        <p>Loading your order receipt...</p>
+    </div>
+
+    <button class="download-btn" onclick="downloadReceipt()">📥 Download Receipt</button>
+
+    <!-- Include html2pdf library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        function getCurrentUser() {
+            return JSON.parse(localStorage.getItem("currentUser") || "null");
+        }
+
+        function updateHeaderBalance() {
+            const user = getCurrentUser();
+            document.getElementById("userBalanceHeader").textContent = `Balance: ${parseFloat(user?.balance || 0).toFixed(2)} GMD`;
+        }
+
+        function renderReceipt() {
+            updateHeaderBalance();
+
+            let orders = JSON.parse(localStorage.getItem("buyerOrders")) || [];
+            if (orders.length === 0) {
+                document.getElementById("receiptContainer").innerHTML = "<p>No recent orders found.</p>";
+                return;
+            }
+
+            const order = orders[orders.length - 1];
+            const container = document.getElementById("receiptContainer");
+
+            // Generate a unique order ID
+            const orderId = `MM-${Date.parse(order.placedAt)}`;
+
+            let html = `
+        <div class="section">
+          <h3>👤 Buyer Information</h3>
+          <p><b>Name:</b> ${order.name}</p>
+          <p><b>Address:</b> ${order.address}</p>
+          <p><b>Phone:</b> ${order.phone}</p>
+          <p><b>Email:</b> ${order.email}</p>
+        </div>
+
+        <div class="section">
+          <h3>📅 Order Details</h3>
+          <p><b>Order ID:</b> ${orderId}</p>
+          <p><b>Order Date:</b> ${new Date(order.placedAt).toLocaleString()}</p>
+          <p><b>Status:</b> ${order.status}</p>
+        </div>
+
+        <div class="section">
+          <h3>🛒 Ordered Items</h3>
+      `;
+
+            order.cart.forEach(item => {
+                const itemTotal = parseFloat(item.price) * (item.quantity || 1);
+                html += `
+          <div class="cart-item">
+            <span>${item.name} x${item.quantity || 1}<br>
+              <small>Seller: ${item.sellerEmail || item.sellerName || 'N/A'}<br>
+              Phone: ${item.sellerPhone || 'N/A'}</small>
+            </span>
+            <strong>${itemTotal.toFixed(2)} GMD</strong>
+          </div>
+        `;
+            });
+
+            html += `<p class="total">Total Paid: ${parseFloat(order.total).toFixed(2)} GMD</p></div>`;
+            html += `<p class="thankyou">🎉 Thank you for shopping with MatrixMarket!</p>`;
+
+            container.innerHTML = html;
+        }
+
+        function downloadReceipt() {
+            const element = document.getElementById('receiptContainer');
+            html2pdf().set({
+                margin: 10,
+                filename: `MatrixMarket_Receipt_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save();
+        }
+
+        window.onload = renderReceipt;
+        window.addEventListener("storage", updateHeaderBalance);
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

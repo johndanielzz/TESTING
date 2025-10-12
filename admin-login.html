@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MatrixMarket Admin Login</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: bgMove 15s ease infinite;
+            color: white;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        @keyframes bgMove {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .login-container {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #06b6d4;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #06b6d4;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #0891b2;
+            transform: scale(1.05);
+        }
+
+        .error {
+            color: #ef4444;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <h1>Admin Login</h1>
+        <input type="email" id="email" placeholder="Admin Email" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button onclick="login()">Login</button>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        // Hardcoded admin credentials
+        const ADMIN_EMAIL = "admin@matrixmarket.com";
+        const ADMIN_PASSWORD = "11223344@Fantastic";
+
+        function login() {
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const errorDiv = document.getElementById("error");
+            errorDiv.textContent = "";
+
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                // Set a simple token in localStorage for dashboard access
+                localStorage.setItem("adminToken", "hardcoded-admin-token");
+                window.location.href = "dashboard-admin.html";
+            } else {
+                errorDiv.textContent = "Invalid email or password";
+            }
+        }
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

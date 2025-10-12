@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>MatrixMarket - Seller Products</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            margin: 0;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientBG {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        header {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h2 {
+            color: #06b6d4;
+        }
+
+        header a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        header a:hover {
+            color: #06b6d4;
+        }
+
+        .container {
+            flex: 1;
+            padding: 30px;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h3 {
+            color: #06b6d4;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+
+        form input,
+        form textarea {
+            margin: 8px 0;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #06b6d4, #4f46e5);
+            border: none;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #06b6d4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            color: #06b6d4;
+        }
+
+        img.product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .actions button {
+            margin: 0 5px;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+
+        .edit {
+            background: #06b6d4;
+            color: #fff;
+        }
+
+        .delete {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .chat {
+            background: #10b981;
+            color: #fff;
+        }
+
+        footer {
+            background: rgba(255, 255, 255, 0.08);
+            text-align: center;
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h2>🛍️ Seller Dashboard</h2>
+        <nav>
+            <a href="seller-dashboard.html">Dashboard</a>
+            <a href="seller-products.html">My Products</a>
+            <a href="#" id="logoutBtn">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h3>Add / Edit Product</h3>
+        <form id="productForm">
+            <input type="hidden" id="editIndex">
+            <input type="text" id="name" placeholder="Product Name" required>
+            <textarea id="description" rows="3" placeholder="Product Description" required></textarea>
+            <input type="number" id="price" placeholder="Price (GMD)" required>
+            <input type="file" id="imageUpload" accept="image/*">
+            <button class="btn" type="submit">Save Product</button>
+        </form>
+
+        <h3>Your Products & Sales</h3>
+        <table id="productTable"></table>
+    </div>
+
+    <footer>© 2025 MatrixMarket | Seller Product Manager</footer>
+
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+        if (!currentUser || !currentUser.isSeller) {
+            alert("Access denied. Sellers only.");
+            window.location.href = "login.html";
+        }
+
+        const form = document.getElementById("productForm");
+        const table = document.getElementById("productTable");
+        const editIndex = document.getElementById("editIndex");
+        const nameInput = document.getElementById("name");
+        const descriptionInput = document.getElementById("description");
+        const priceInput = document.getElementById("price");
+        const imageUpload = document.getElementById("imageUpload");
+
+        let imageBase64 = "";
+
+        imageUpload.addEventListener("change", function () {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                imageBase64 = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        form.addEventListener("submit", e => {
+            e.preventDefault();
+
+            const name = nameInput.value.trim();
+            const description = descriptionInput.value.trim();
+            const price = parseFloat(priceInput.value.trim());
+
+            let allProducts = JSON.parse(localStorage.getItem("products")) || [];
+
+            if (editIndex.value) {
+                const index = parseInt(editIndex.value);
+                allProducts[index] = {
+                    ...allProducts[index],
+                    name, description, price,
+                    image: imageBase64 || allProducts[index].image
+                };
+                editIndex.value = "";
+                alert("✅ Product updated successfully!");
+            } else {
+                allProducts.push({
+                    name,
+                    description,
+                    price,
+                    image: imageBase64 || "https://via.placeholder.com/100",
+                    sellerEmail: currentUser.email,
+                    buyerEmail: "",
+                    buyerAddress: "",
+                    date: new Date().toISOString()
+                });
+                alert("✅ Product added successfully!");
+            }
+
+            localStorage.setItem("products", JSON.stringify(allProducts));
+            imageBase64 = "";
+            form.reset();
+            renderProducts();
+        });
+
+        function renderProducts() {
+            const allProducts = JSON.parse(localStorage.getItem("products")) || [];
+            const myProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
+
+            let rows = `
+        <tr>
+          <th>Image</th>
+          <th>Product</th>
+          <th>Description</th>
+          <th>Price (GMD)</th>
+          <th>Buyer</th>
+          <th>Address</th>
+          <th>Actions</th>
+        </tr>`;
+
+            if (myProducts.length === 0) {
+                rows += `<tr><td colspan="7" style="text-align:center;">No products yet.</td></tr>`;
+            } else {
+                myProducts.forEach((p, i) => {
+                    rows += `
+            <tr>
+              <td><img src="${p.image}" alt="${p.name}" class="product-img"></td>
+              <td>${p.name}</td>
+              <td>${p.description}</td>
+              <td>${p.price.toFixed(2)}</td>
+              <td>${p.buyerEmail || "—"}</td>
+              <td>${p.buyerAddress || "—"}</td>
+              <td class="actions">
+                <button class="edit" onclick="editProduct(${i})">Edit</button>
+                <button class="delete" onclick="deleteProduct(${i})">Delete</button>
+              </td>
+            </tr>`;
+                });
+            }
+            table.innerHTML = rows;
+        }
+
+        function editProduct(index) {
+            const products = JSON.parse(localStorage.getItem("products")) || [];
+            const myProducts = products.filter(p => p.sellerEmail === currentUser.email);
+            const product = myProducts[index];
+            if (!product) return;
+
+            nameInput.value = product.name;
+            descriptionInput.value = product.description;
+            priceInput.value = product.price;
+            editIndex.value = index;
+            window.scrollTo(0, 0);
+        }
+
+        function deleteProduct(index) {
+            let allProducts = JSON.parse(localStorage.getItem("products")) || [];
+            const myProducts = allProducts.filter(p => p.sellerEmail === currentUser.email);
+            const target = myProducts[index];
+            allProducts = allProducts.filter(p => !(p.sellerEmail === target.sellerEmail && p.name === target.name));
+            localStorage.setItem("products", JSON.stringify(allProducts));
+            renderProducts();
+        }
+
+        document.getElementById("logoutBtn").onclick = () => {
+            localStorage.removeItem("currentUser");
+            window.location.href = "login.html";
+        };
+
+        window.onload = renderProducts;
+    </script>
+     <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

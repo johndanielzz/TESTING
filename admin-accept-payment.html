@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MatrixMarket Admin - Manage Payments</title>
+    <style>
+        /* ==============================
+   Global Styles
+============================== */
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: 0.3s;
+        }
+
+        /* ==============================
+   Header
+============================== */
+        header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #06b6d4;
+            font-weight: 600;
+            flex-wrap: wrap;
+        }
+
+        header a {
+            color: #fff;
+            margin-left: 12px;
+            font-weight: 500;
+        }
+
+        header a:hover {
+            color: #06b6d4;
+        }
+
+        /* ==============================
+   Container
+============================== */
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+            overflow-x: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #06b6d4;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        /* ==============================
+   Table
+============================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            min-width: 600px;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(6, 182, 212, 0.2);
+            color: #06b6d4;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ==============================
+   Buttons
+============================== */
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .accept {
+            background: #22c55e;
+            color: white;
+        }
+
+        .accept:hover {
+            background: #16a34a;
+        }
+
+        .decline {
+            background: #ef4444;
+            color: white;
+        }
+
+        .decline:hover {
+            background: #dc2626;
+        }
+
+        /* ==============================
+   Status badges
+============================== */
+        .status {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .pending {
+            background: rgba(250, 204, 21, 0.2);
+            color: #facc15;
+        }
+
+        .approved {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .declined {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 20px;
+            color: #cbd5e1;
+        }
+
+        /* ==============================
+   Footer
+============================== */
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.08);
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* ==============================
+   Responsive
+============================== */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 25px;
+            }
+
+            table {
+                min-width: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            table {
+                min-width: 100%;
+            }
+
+            th,
+            td {
+                padding: 10px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+
+            th,
+            td {
+                padding: 8px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyBZpLELrmplsK66YNPycGLO2Aab9jvxa9k",
+            authDomain: "matrixmarketpace.firebaseapp.com",
+            projectId: "matrixmarketpace",
+            storageBucket: "matrixmarketpace.firebasestorage.app",
+            messagingSenderId: "200867795667",
+            appId: "1:200867795667:web:64de1ece48ddc07fa4ba26",
+            measurementId: "G-10TFPP3LDD"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
+    <header>
+        <div>💼 MatrixMarket Admin</div>
+        <nav>
+            <a href="dashboard-admin.html">Dashboard</a>
+            <a href="admin-sellers.html">Sellers</a>
+            <a href="index.html">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>📋 Manage Payment Requests</h1>
+        <table id="paymentTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Amount (GMD)</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="paymentBody"></tbody>
+        </table>
+        <div class="empty" id="emptyMsg">No pending payments found.</div>
+    </div>
+
+    <footer>
+        © 2025 MatrixMarket | Admin Panel
+    </footer>
+
+    <script>
+        function loadPayments() {
+            const payments = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            const body = document.getElementById("paymentBody");
+            const emptyMsg = document.getElementById("emptyMsg");
+
+            body.innerHTML = "";
+
+            if (payments.length === 0) {
+                emptyMsg.style.display = "block";
+                return;
+            } else {
+                emptyMsg.style.display = "none";
+            }
+
+            payments.forEach((p, i) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+          <td>${p.name}</td>
+          <td>${p.email}</td>
+          <td>${p.amount}</td>
+          <td>${p.method}</td>
+          <td>${p.date}</td>
+          <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
+          <td>
+            ${p.status === "Pending"
+                        ? `<button class="btn accept" onclick="updatePayment(${i}, 'Approved')">Accept</button>
+                   <button class="btn decline" onclick="updatePayment(${i}, 'Declined')">Decline</button>`
+                        : "-"
+                    }
+          </td>
+        `;
+                body.appendChild(row);
+            });
+        }
+
+        function updatePayment(index, newStatus) {
+            let payments = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            let userPayments = payments[index];
+            if (!userPayments) return;
+
+            userPayments.status = newStatus;
+            localStorage.setItem("pendingRequests", JSON.stringify(payments));
+
+            const userDataKeys = ["currentUser", "currentSeller", "loggedInUser", "user"];
+            for (const key of userDataKeys) {
+                const storedUser = JSON.parse(localStorage.getItem(key));
+                if (storedUser && storedUser.email === userPayments.email) {
+                    storedUser.paymentStatus = newStatus === "Approved" ? "Paid" : "Declined";
+                    storedUser.status = newStatus;
+                    localStorage.setItem(key, JSON.stringify(storedUser));
+                }
+            }
+
+            loadPayments();
+        }
+
+        window.onload = loadPayments;
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+    
+</body>
+
+</html>

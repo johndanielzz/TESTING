@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatrixMarket - Home</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* ===========================
+   Global Styles
+=========================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        @keyframes gradientBG {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: 0.3s;
+        }
+
+        a:hover {
+            color: #06b6d4;
+        }
+
+        /* ===========================
+   Page Container
+=========================== */
+        .page-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* ===========================
+   Header
+=========================== */
+        header {
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #06b6d4;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            color: #06b6d4;
+        }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 8px;
+            min-width: 160px;
+            overflow: hidden;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropdown-content a {
+            display: block;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .dropdown-content a:hover {
+            background: rgba(6, 182, 212, 0.18);
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .welcome-user {
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            margin-left: 6px;
+        }
+
+        .balance-box {
+            font-weight: 700;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.12);
+            padding: 6px 10px;
+            border-radius: 8px;
+            margin-left: 6px;
+            font-size: 0.9rem;
+        }
+
+        .topup-btn {
+            background: #06b6d4;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            color: #fff;
+            transition: 0.2s;
+        }
+
+        .topup-btn:hover {
+            background: #4f46e5;
+        }
+
+        /* ===========================
+   Hero Section
+=========================== */
+        .hero {
+            text-align: center;
+            padding: 60px 16px;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        .hero h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        .hero p {
+            font-size: 1rem;
+            color: #e6eef8;
+            margin-bottom: 20px;
+        }
+
+        .hero .btn {
+            background: #06b6d4;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hero .btn:hover {
+            background: #4f46e5;
+        }
+
+        /* ===========================
+   Search Bar
+=========================== */
+        .search-bar {
+            margin: 28px auto;
+            text-align: center;
+        }
+
+        .search-bar input,
+        .search-bar select {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            margin-right: 8px;
+            width: 180px;
+            max-width: 45vw;
+        }
+
+        .search-bar button {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            background: #06b6d4;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .search-bar button:hover {
+            background: #4f46e5;
+        }
+
+        /* ===========================
+   Products Section
+=========================== */
+        .products {
+            padding: 28px 0 48px;
+            text-align: center;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+            align-items: start;
+        }
+
+        .product-card {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 320px;
+        }
+
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(6, 182, 212, 0.2);
+        }
+
+        .product-thumb {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: #0b1220;
+        }
+
+        .product-card h3 {
+            margin: 6px 0;
+            font-size: 1.05rem;
+            color: #fff;
+        }
+
+        .product-card p {
+            margin: 4px 0;
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+
+        .product-price {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .price {
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .small-btn {
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: #06b6d4;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .small-btn:hover {
+            background: #4f46e5;
+        }
+
+        /* ===========================
+   Footer
+=========================== */
+        footer {
+            background: rgba(0, 0, 0, 0.7);
+            text-align: center;
+            padding: 18px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        /* ===========================
+   Responsive
+=========================== */
+        @media (max-width: 900px) {
+            .product-grid {
+                gap: 14px;
+            }
+
+            .product-card {
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            header {
+                padding: 10px 12px;
+            }
+
+            .logo {
+                font-size: 1.25rem;
+            }
+
+            .hero {
+                padding: 36px 12px;
+            }
+
+            .hero h1 {
+                font-size: 1.6rem;
+            }
+
+            .product-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 12px;
+            }
+
+            .product-thumb {
+                height: 120px;
+            }
+
+            .search-bar input,
+            .search-bar select {
+                width: 120px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <header>
+            <div class="logo">MatrixMarket</div>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="shop.html">Shop</a>
+                <a href="seller-login.html">Sellers</a>
+                <a href="chat.html">Chat</a>
+                <a href="cart.html">Cart 🛒</a>
+                <div class="dropdown" id="accountDropdown">
+                    <a href="#">My Account ▼</a>
+                    <div class="dropdown-content" id="accountLinks"></div>
+                </div>
+                <span class="welcome-user" id="welcomeUser"></span>
+                <span class="balance-box" id="userBalance">Balance: 0 GMD</span>
+                <a href="confirm-payment.html" class="topup-btn">💰 Top Up</a>
+            </nav>
+        </header>
+
+        <!-- Hero -->
+        <section class="hero">
+            <h1>Welcome to MatrixMarket</h1>
+            <p>The futuristic marketplace where technology meets style.</p>
+            <a href="shop.html" class="btn">Start Shopping</a>
+        </section>
+
+        <!-- Search -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔍 Search products..." />
+            <select id="categoryFilter">
+                <option value="">All Categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="fashion">Fashion</option>
+                <option value="gaming">Gaming</option>
+                <option value="home">Home & Living</option>
+            </select>
+            <button class="btn" onclick="filterProducts()">Filter</button>
+        </div>
+
+        <!-- Products -->
+        <section class="products">
+            <h2>🛍️ Latest Products</h2>
+            <div id="productList" class="product-grid" aria-live="polite">
+                <!-- product cards injected by JS -->
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2025 MatrixMarket. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        function refreshUserInfo() {
+            const user = JSON.parse(localStorage.getItem("currentUser") || "null");
+            let balance = 0;
+            const requests = JSON.parse(localStorage.getItem("pendingRequests") || "[]");
+
+            if (user) {
+                balance = parseFloat(user.balance || 0);
+                requests.forEach(req => {
+                    if (req.email === user.email && (req.status === "Approved" || req.status === "success") && !req.addedToBalance && req.type !== "subscription") {
+                        balance += parseFloat(req.amount || 0);
+                        req.addedToBalance = true;
+                    }
+                });
+                user.balance = balance;
+                localStorage.setItem("pendingRequests", JSON.stringify(requests));
+                localStorage.setItem("currentUser", JSON.stringify(user));
+
+                document.getElementById("welcomeUser").innerText = "👋 " + (user.fullName || user.email);
+                document.getElementById("userBalance").innerText = "Balance: " + balance.toFixed(2) + " GMD";
+                document.getElementById("accountLinks").innerHTML = `
+            <a href="buyers-orders.html">📦 My Orders</a>
+            <a href="settings.html">⚙ Settings</a>
+            <a href="#" onclick="logoutUser()">🚪 Logout</a>`;
+            } else {
+                document.getElementById("welcomeUser").innerText = "";
+                document.getElementById("userBalance").innerText = "Balance: 0 GMD";
+                document.getElementById("accountLinks").innerHTML = `
+            <a href="login.html">🔑 Login</a>
+            <a href="register.html">📝 Sign Up</a>`;
+            }
+        }
+
+        function logoutUser() {
+            localStorage.removeItem("currentUser");
+            refreshUserInfo();
+            alert("✅ Logged out successfully!");
+        }
+
+        function addToCart(product) {
+            let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+            cart.push(product);
+            localStorage.setItem("cart", JSON.stringify(cart));
+            alert("🛒 " + product.name + " added to cart!");
+        }
+
+        function filterProducts() {
+            const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            const cat = document.getElementById('categoryFilter').value;
+            renderProducts(q, cat);
+        }
+
+        function renderProducts(filterText = '', filterCategory = '') {
+            const productList = document.getElementById("productList");
+            const products = JSON.parse(localStorage.getItem("products") || "[]");
+            const filtered = products.filter(p => {
+                const matchesText = !filterText || (p.name && p.name.toLowerCase().includes(filterText)) || (p.category && p.category.toLowerCase().includes(filterText));
+                const matchesCat = !filterCategory || p.category === filterCategory;
+                return matchesText && matchesCat;
+            });
+
+            if (!filtered.length) {
+                productList.innerHTML = "<p style='color:#cbd5e1;'>No products found.</p>";
+                return;
+            }
+
+            productList.innerHTML = filtered.map(p => {
+                const safe = v => v === undefined || v === null ? '' : String(v).replace(/"/g, '&quot;');
+                return `<div class="product-card" role="article">
+            <img class="product-thumb" src="${safe(p.image) || 'https://via.placeholder.com/400x300?text=No+Image'}" alt="${safe(p.name)}" />
+            <h3>${safe(p.name)}</h3>
+            <p>${safe(p.category)}</p>
+            <div class="product-price">
+                <div class="price">${safe(p.price)} GMD</div>
+                <button class="small-btn" onclick='addToCart(${JSON.stringify(p)})'>Add</button>
+            </div>
+        </div>`;
+            }).join('');
+        }
+
+        window.addEventListener('load', () => {
+            refreshUserInfo();
+            renderProducts();
+        });
+        window.addEventListener('storage', () => {
+            refreshUserInfo();
+            renderProducts();
+        });
+    </script>
+<script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+<script src="./firebase.js"></script>
+<script src="./admin.js"></script>
+<script src="./assigned-code.js"></script>
+<script src="./auth.js"></script>
+<script src="./codeGen.js"></script>
+<script src="./db.js"></script>
+<script src="./message.js"></script>
+<script src="./order.js"></script>
+<script src="./product.js"></script>
+<script src="./script.js"></script>
+<script src="./seed.js"></script>
+<script src="./seller.js"></script>
+<script src="./server.js"></script>
+<script src="./user.js"></script>
+<script src="./routes/admin.js"></script>
+<script src="./routes/auth.js"></script>
+<script src="./routes/messages.js"></script>
+<script src="./routes/orders.js"></script>
+<script src="./routes/payments.js"></script>
+<script src="./routes/products.js"></script>
+</body>
+
+</html>

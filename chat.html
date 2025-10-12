@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Seller - Matrix Store</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .chat-page {
+            max-width: 900px;
+            margin: 40px auto;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #06b6d4, #4f46e5);
+            padding: 15px;
+            text-align: center;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #0f172a;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.user {
+            margin-left: auto;
+            background: #06b6d4;
+            color: white;
+            border-bottom-right-radius: 4px;
+            flex-direction: row-reverse;
+        }
+
+        .message.other {
+            margin-right: auto;
+            background: #334155;
+            color: #f1f5f9;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid #1e293b;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 25px;
+            border: none;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .chat-input button {
+            margin-left: 10px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #06b6d4, #4f46e5);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .chat-input button:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        }
+
+        .timestamp {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">Matrix Store</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="cart.html">Cart</a>
+            <a href="chat.html">Chat</a>
+        </nav>
+    </header>
+
+    <div class="chat-page">
+        <div class="chat-header" id="chatHeader">💬 Chat</div>
+
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Load current user
+        let currentUser = JSON.parse(localStorage.getItem("currentUser")) || { username: "Guest" };
+
+        // Get seller from URL
+        const params = new URLSearchParams(window.location.search);
+        const sellerName = params.get("seller") || "Support";
+
+        document.getElementById("chatHeader").textContent = "💬 Chat with " + sellerName;
+
+        // Consistent chat key (order usernames alphabetically)
+        const participants = [currentUser.username, sellerName].sort();
+        const chatKey = `chat_${participants[0]}_${participants[1]}`;
+
+        function loadMessages() {
+            let messages = JSON.parse(localStorage.getItem(chatKey)) || [];
+            let chatMessages = document.getElementById("chatMessages");
+            chatMessages.innerHTML = "";
+
+            messages.forEach(m => {
+                let div = document.createElement("div");
+                div.classList.add("message");
+                div.classList.add(m.sender === currentUser.username ? "user" : "other");
+
+                div.innerHTML = `
+          <div class="avatar">${m.sender.charAt(0).toUpperCase()}</div>
+          <div>
+            <div>${m.text}</div>
+            <div class="timestamp">${m.time}</div>
+          </div>
+        `;
+
+                chatMessages.appendChild(div);
+            });
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById("chatInput");
+            const text = input.value.trim();
+            if (text === "") return;
+
+            let messages = JSON.parse(localStorage.getItem(chatKey)) || [];
+            messages.push({
+                sender: currentUser.username,
+                text,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            localStorage.setItem(chatKey, JSON.stringify(messages));
+
+            input.value = "";
+            loadMessages();
+        }
+
+        window.onload = loadMessages;
+    </script>
+<script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+<script src="./firebase.js"></script>
+<script src="./admin.js"></script>
+<script src="./assigned-code.js"></script>
+<script src="./auth.js"></script>
+<script src="./codeGen.js"></script>
+<script src="./db.js"></script>
+<script src="./message.js"></script>
+<script src="./order.js"></script>
+<script src="./product.js"></script>
+<script src="./script.js"></script>
+<script src="./seed.js"></script>
+<script src="./seller.js"></script>
+<script src="./server.js"></script>
+<script src="./user.js"></script>
+<script src="./routes/admin.js"></script>
+<script src="./routes/auth.js"></script>
+<script src="./routes/messages.js"></script>
+<script src="./routes/orders.js"></script>
+<script src="./routes/payments.js"></script>
+<script src="./routes/products.js"></script>
+</body>
+
+</html>

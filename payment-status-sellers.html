@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MatrixMarket - Seller Payment Status</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        header {
+            padding: 15px 40px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #06b6d4;
+            text-shadow: 0 0 10px #4f46e5;
+        }
+
+        header nav a {
+            margin: 0 12px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        header nav a:hover {
+            color: #06b6d4;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        .card h1 {
+            font-size: 2.2rem;
+            color: #06b6d4;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+
+        .success {
+            color: #22c55e;
+            text-shadow: 0 0 8px #22c55e;
+        }
+
+        .pending {
+            color: #facc15;
+            text-shadow: 0 0 8px #facc15;
+        }
+
+        .declined {
+            color: #ef4444;
+            text-shadow: 0 0 8px #ef4444;
+        }
+
+        .details {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+            display: none;
+        }
+
+        .details p {
+            margin: 8px 0;
+            font-size: 1rem;
+        }
+
+        .btn {
+            margin-top: 25px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #06b6d4, #4f46e5);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+            transition: all 0.3s ease-in-out;
+            display: none;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px #06b6d4;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+
+    <script>
+        function getSeller() {
+            return JSON.parse(localStorage.getItem("currentSeller")) ||
+                JSON.parse(localStorage.getItem("seller")) ||
+                JSON.parse(localStorage.getItem("loggedInSeller")) ||
+                null;
+        }
+
+        function updateStatus() {
+            const seller = getSeller();
+            const title = document.getElementById("title");
+            const msg = document.getElementById("statusMsg");
+            const details = document.getElementById("details");
+            const btn = document.getElementById("continueBtn");
+
+            if (!seller) {
+                title.innerText = "⚠️ Seller Not Logged In";
+                msg.innerText = "Please log in to view your payment status.";
+                msg.className = "status declined";
+                return;
+            }
+
+            const email = seller.email;
+            let requests = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            const request = requests.find(r => r.email === email);
+
+            if (!request) {
+                title.innerText = "⌛ No Payment Found";
+                msg.innerText = "You have not made any payment request yet.";
+                msg.className = "status pending";
+                return;
+            }
+
+            details.style.display = "block";
+            document.getElementById("detailsName").innerText = request.name || seller.name;
+            document.getElementById("detailsAmount").innerText = request.amount + " GMD";
+            document.getElementById("detailsMethod").innerText = request.method;
+            document.getElementById("detailsDate").innerText = request.date;
+
+            switch (request.status) {
+                case "Approved":
+                    title.innerText = "✅ Payment Approved";
+                    msg.innerText = "Your withdrawal request has been approved by the admin!";
+                    msg.className = "status success";
+                    btn.style.display = "inline-block";
+                    btn.innerText = "Go to Subscription";
+                    btn.onclick = goToSubscription;
+                    break;
+                case "Declined":
+                    title.innerText = "❌ Payment Declined";
+                    msg.innerText = "Your payment was declined by admin.";
+                    msg.className = "status declined";
+                    btn.style.display = "none";
+                    break;
+                default:
+                    title.innerText = "⌛ Payment Pending";
+                    msg.innerText = "Waiting for admin approval...";
+                    msg.className = "status pending";
+                    btn.style.display = "none";
+            }
+        }
+
+        function goToSubscription() {
+            const seller = getSeller();
+            let sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+            sellers = sellers.map(s => s.email === seller.email ? { ...s, subscription: "active" } : s);
+            localStorage.setItem("sellers", JSON.stringify(sellers));
+            localStorage.setItem("currentSeller", JSON.stringify({ ...seller, subscription: "active" }));
+            window.location.href = "subscription-code.html";
+        }
+
+        window.onload = () => {
+            updateStatus();
+            setInterval(updateStatus, 4000);
+        };
+    </script>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket</div>
+        <nav>
+            <a href="seller-dashboard.html">Dashboard</a>
+            <a href="index.html">Home</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h1 id="title">Loading...</h1>
+            <p id="statusMsg" class="status"></p>
+
+            <div class="details" id="details">
+                <p><strong>Name:</strong> <span id="detailsName"></span></p>
+                <p><strong>Amount:</strong> <span id="detailsAmount"></span></p>
+                <p><strong>Method:</strong> <span id="detailsMethod"></span></p>
+                <p><strong>Date:</strong> <span id="detailsDate"></span></p>
+            </div>
+
+            <button id="continueBtn" class="btn">Go to Subscription</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 MatrixMarket | Seller Payment Status</p>
+    </footer>
+</body>
+<script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+<script src="./firebase.js"></script>
+<script src="./admin.js"></script>
+<script src="./assigned-code.js"></script>
+<script src="./auth.js"></script>
+<script src="./codeGen.js"></script>
+<script src="./db.js"></script>
+<script src="./message.js"></script>
+<script src="./order.js"></script>
+<script src="./product.js"></script>
+<script src="./script.js"></script>
+<script src="./seed.js"></script>
+<script src="./seller.js"></script>
+<script src="./server.js"></script>
+<script src="./user.js"></script>
+<script src="./routes/admin.js"></script>
+<script src="./routes/auth.js"></script>
+<script src="./routes/messages.js"></script>
+<script src="./routes/orders.js"></script>
+<script src="./routes/payments.js"></script>
+<script src="./routes/products.js"></script>
+</html>

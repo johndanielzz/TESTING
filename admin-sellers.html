@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatrixMarket - Admin Seller Control</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: bgMove 15s ease infinite;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        @keyframes bgMove {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        header .logo {
+            font-size: 1.6rem;
+            color: #06b6d4;
+            font-weight: bold;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        nav a:hover {
+            color: #06b6d4;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+            overflow-x: auto;
+        }
+
+        h1 {
+            text-align: center;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1100px;
+        }
+
+        th,
+        td {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: rgba(6, 182, 212, 0.3);
+        }
+
+        img.proof {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            border: 2px solid rgba(6, 182, 212, 0.4);
+            object-fit: cover;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        img.proof:hover {
+            transform: scale(1.2);
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            margin: 2px;
+            font-weight: 500;
+        }
+
+        .approve {
+            background: #06b6d4;
+        }
+
+        .decline {
+            background: #ef4444;
+        }
+
+        .approve:hover {
+            background: #0891b2;
+        }
+
+        .decline:hover {
+            background: #b91c1c;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .approved {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .declined {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 40px;
+        }
+
+        .copy {
+            color: #06b6d4;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 15px;
+            border: 3px solid #06b6d4;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket Admin</div>
+        <nav>
+            <a href="dashboard-admin.html">Dashboard</a>
+            <a href="admin-sellers.html">Sellers</a>
+            <a href="admin-users.html">Users</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>🧾 Manage Sellers & Subscriptions</h1>
+        <input type="text" id="searchBox" placeholder="Search seller by name, email, or code..."
+            onkeyup="renderSellers()">
+        <table id="sellerTable"></table>
+    </div>
+
+    <div class="modal" id="imageModal" onclick="this.style.display='none'">
+        <img id="modalImg" src="">
+    </div>
+
+    <footer>© 2025 MatrixMarket | Admin Seller Control</footer>
+
+    <script>
+        function renderSellers() {
+            const sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+            const search = document.getElementById("searchBox").value.toLowerCase();
+            const table = document.getElementById("sellerTable");
+
+            const filtered = sellers.filter(s =>
+                s.email?.toLowerCase().includes(search) ||
+                s.name?.toLowerCase().includes(search) ||
+                s.code?.toLowerCase().includes(search)
+            );
+
+            table.innerHTML = `
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Code</th>
+          <th>Password</th>
+          <th>Plan</th>
+          <th>Store</th>
+          <th>Status</th>
+          <th>Proof</th>
+          <th>Subscription</th>
+          <th>Action</th>
+        </tr>
+      `;
+
+            if (filtered.length === 0) {
+                table.innerHTML += `<tr><td colspan="10">No sellers found.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(seller => {
+                const statusClass =
+                    seller.status === "Approved" ? "approved" :
+                        seller.status === "Declined" ? "declined" : "pending";
+
+                const proofHTML = seller.proof
+                    ? `<img src="${seller.proof}" class="proof" onclick="viewProof('${seller.proof}')">`
+                    : "No proof";
+
+                const subStatus = seller.subscription || "Inactive";
+                const pass = seller.password ? seller.password : "-";
+                const code = seller.code ? seller.code : "-";
+
+                table.innerHTML += `
+          <tr>
+            <td>${seller.name || "-"}</td>
+            <td>${seller.email}</td>
+            <td><span class="copy" onclick="copyText('${code}')">${code}</span></td>
+            <td><span class="copy" onclick="copyText('${pass}')">${pass}</span></td>
+            <td>${seller.plan || "Free"}</td>
+            <td>${seller.store || "N/A"}</td>
+            <td><span class="status ${statusClass}">${seller.status || "Pending"}</span></td>
+            <td>${proofHTML}</td>
+            <td>${subStatus}</td>
+            <td>
+              <button class="btn approve" onclick="approveSeller('${seller.email}')">Approve</button>
+              <button class="btn decline" onclick="declineSeller('${seller.email}')">Decline</button>
+            </td>
+          </tr>
+        `;
+            });
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            alert("Copied: " + text);
+        }
+
+        function viewProof(src) {
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("modalImg");
+            modalImg.src = src;
+            modal.style.display = "flex";
+        }
+
+        function approveSeller(email) {
+            let sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+            sellers = sellers.map(s => {
+                if (s.email === email) {
+                    s.status = "Approved";
+                    s.paymentStatus = "Paid";
+                    s.subscription = "Active";
+                    s.canLogin = true;
+                }
+                return s;
+            });
+            localStorage.setItem("sellers", JSON.stringify(sellers));
+            alert("✅ Seller approved — login enabled!");
+            renderSellers();
+        }
+
+        function declineSeller(email) {
+            let sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+            sellers = sellers.map(s => {
+                if (s.email === email) {
+                    s.status = "Declined";
+                    s.paymentStatus = "Unpaid";
+                    s.subscription = "Inactive";
+                    s.canLogin = false;
+                }
+                return s;
+            });
+            localStorage.setItem("sellers", JSON.stringify(sellers));
+            alert("❌ Seller declined — login disabled.");
+            renderSellers();
+        }
+
+        window.onload = renderSellers;
+    </script>
+     <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

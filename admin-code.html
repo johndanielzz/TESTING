@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Subscription Codes | MatrixMarket</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        header {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #4f46e5;
+        }
+
+        table {
+            width: 90%;
+            margin-top: 30px;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.4);
+        }
+
+        th,
+        td {
+            padding: 14px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #06b6d4;
+            font-weight: 600;
+        }
+
+        td {
+            color: #e2e8f0;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            margin: 3px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .approve {
+            background: #22c55e;
+            color: white;
+        }
+
+        .deactivate {
+            background: #ef4444;
+            color: white;
+        }
+
+        .renew {
+            background: #fbbf24;
+            color: #222;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+
+        .back-btn {
+            margin-top: 25px;
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #06b6d4, #4f46e5);
+            color: white;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket Admin</div>
+        <nav>
+            <a href="dashboard-admin.html" style="color:#fff;text-decoration:none;">⬅ Back to Dashboard</a>
+        </nav>
+    </header>
+
+    <h2>📋 Manage Subscription Codes</h2>
+    <table id="codesTable">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Code</th>
+                <th>Expiry</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        function loadCodes() {
+            const codes = JSON.parse(localStorage.getItem("assignedCodes") || "{}");
+            const sellers = JSON.parse(localStorage.getItem("sellers") || "[]");
+            const tbody = document.querySelector("#codesTable tbody");
+            tbody.innerHTML = "";
+
+            Object.keys(codes).forEach(email => {
+                const codeData = codes[email];
+                const expiry = new Date(codeData.expiry);
+                const expired = expiry < new Date();
+                const seller = sellers.find(s => s.email === email);
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+          <td>${email}</td>
+          <td>${codeData.value}</td>
+          <td>${expiry.toDateString()}</td>
+          <td style="color:${expired ? "#ef4444" : "#22c55e"}">${expired ? "Expired" : "Active"}</td>
+          <td>
+            <button class="approve" onclick="approve('${email}')">Approve</button>
+            <button class="deactivate" onclick="deactivate('${email}')">Deactivate</button>
+            <button class="renew" onclick="renew('${email}')">Renew</button>
+          </td>
+        `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function approve(email) {
+            const sellers = JSON.parse(localStorage.getItem("sellers") || "[]");
+            const codes = JSON.parse(localStorage.getItem("assignedCodes") || "{}");
+            const seller = sellers.find(s => s.email === email);
+            if (!seller) return alert("Seller not found.");
+
+            seller.status = "approved";
+            seller.subscription = "active";
+            seller.paymentStatus = "paid";
+
+            localStorage.setItem("sellers", JSON.stringify(sellers));
+            alert(`✅ ${email} approved successfully.`);
+        }
+
+        function deactivate(email) {
+            const sellers = JSON.parse(localStorage.getItem("sellers") || "[]");
+            const codes = JSON.parse(localStorage.getItem("assignedCodes") || "{}");
+
+            const seller = sellers.find(s => s.email === email);
+            if (seller) {
+                seller.status = "deactivated";
+                seller.subscription = "inactive";
+                seller.paymentStatus = "unpaid";
+            }
+
+            delete codes[email];
+            localStorage.setItem("sellers", JSON.stringify(sellers));
+            localStorage.setItem("assignedCodes", JSON.stringify(codes));
+            alert(`🚫 ${email} has been deactivated.`);
+            loadCodes();
+        }
+
+        function renew(email) {
+            const codes = JSON.parse(localStorage.getItem("assignedCodes") || "{}");
+            if (!codes[email]) return alert("No code found for this email.");
+
+            const newExpiry = new Date();
+            newExpiry.setDate(newExpiry.getDate() + 30);
+            codes[email].expiry = newExpiry.toISOString();
+
+            localStorage.setItem("assignedCodes", JSON.stringify(codes));
+            alert(`🔄 Code renewed for ${email} until ${newExpiry.toDateString()}`);
+            loadCodes();
+        }
+
+        window.onload = loadCodes;
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

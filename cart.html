@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatrixMarket - Cart</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: "Poppins", Arial, sans-serif;
+            background: #0f172a;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #06b6d4;
+        }
+
+        nav a {
+            color: #fff;
+            margin: 5px 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        nav a.active,
+        nav a:hover {
+            color: #06b6d4;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 25px 0;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #06b6d4;
+        }
+
+        .cart-container {
+            width: 90%;
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .cart-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: wrap;
+        }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item img {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+
+        .cart-details {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .cart-details h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .cart-details p {
+            margin: 4px 0;
+            color: #ccc;
+        }
+
+        .quantity-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .quantity-btn {
+            background: #06b6d4;
+            border: none;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        .quantity-btn:hover {
+            background: #4f46e5;
+        }
+
+        .remove-btn {
+            background: #e11d48;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .remove-btn:hover {
+            background: #b91c1c;
+        }
+
+        .total {
+            text-align: right;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 900px;
+            color: #06b6d4;
+        }
+
+        .checkout-form {
+            width: 90%;
+            max-width: 900px;
+            margin: 25px auto;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .checkout-form h3 {
+            color: #06b6d4;
+            margin-bottom: 12px;
+        }
+
+        .checkout-form input,
+        .checkout-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .checkout-btn {
+            display: block;
+            margin: 25px auto;
+            padding: 12px 24px;
+            background: #06b6d4;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .checkout-btn:hover {
+            background: #4f46e5;
+        }
+
+        @media(max-width: 600px) {
+            .cart-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .cart-item img {
+                margin-bottom: 10px;
+            }
+
+            .quantity-box {
+                margin-top: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="cart.html" class="active">Cart</a>
+            <a href="chat.html">Chat</a>
+        </nav>
+    </header>
+
+    <h2>🛒 Your Shopping Cart</h2>
+
+    <div class="cart-container" id="cartContainer">
+        <p class="empty">Loading your cart...</p>
+    </div>
+
+    <div class="total" id="cartTotal">Total: 0 GMD</div>
+
+    <div class="checkout-form">
+        <h3>📝 Buyer Information</h3>
+        <input type="text" id="buyerName" placeholder="Full Name" required>
+        <input type="text" id="buyerPhone" placeholder="Phone Number" required>
+        <input type="email" id="buyerEmail" placeholder="Email Address" required>
+        <textarea id="buyerAddress" placeholder="Delivery Address" rows="3" required></textarea>
+    </div>
+
+    <button class="checkout-btn" onclick="checkout()">💳 Proceed to Checkout</button>
+
+    <script>
+        const CART_KEY = "cart";
+
+        function getCart() {
+            return JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem(CART_KEY, JSON.stringify(cart));
+        }
+
+        function loadCart() {
+            const cart = getCart();
+            const container = document.getElementById("cartContainer");
+            let total = 0;
+            container.innerHTML = "";
+
+            if (!cart.length) {
+                container.innerHTML = '<p class="empty">Your cart is empty.</p>';
+                document.getElementById("cartTotal").textContent = "Total: 0 GMD";
+                return;
+            }
+
+            cart.forEach((item, index) => {
+                item.quantity = item.quantity || 1;
+                total += parseFloat(item.price) * item.quantity;
+
+                const div = document.createElement("div");
+                div.className = "cart-item";
+                div.innerHTML = `
+          <img src="${item.image || 'https://via.placeholder.com/80'}" alt="${item.name}">
+          <div class="cart-details">
+            <h3>${item.name}</h3>
+            <p><strong>${parseFloat(item.price).toFixed(2)} GMD</strong></p>
+            <p>Seller: ${item.sellerEmail || 'N/A'}</p>
+            <div class="quantity-box">
+              <button class="quantity-btn" onclick="updateQuantity(${index},-1)">-</button>
+              <span>${item.quantity}</span>
+              <button class="quantity-btn" onclick="updateQuantity(${index},1)">+</button>
+            </div>
+          </div>
+          <button class="remove-btn" onclick="removeItem(${index})">❌ Remove</button>
+        `;
+                container.appendChild(div);
+            });
+
+            document.getElementById("cartTotal").textContent = "Total: " + total.toFixed(2) + " GMD";
+        }
+
+        function updateQuantity(index, change) {
+            const cart = getCart();
+            if (!cart[index]) return;
+            cart[index].quantity += change;
+            if (cart[index].quantity <= 0) cart.splice(index, 1);
+            saveCart(cart);
+            loadCart();
+        }
+
+        function removeItem(index) {
+            const cart = getCart();
+            cart.splice(index, 1);
+            saveCart(cart);
+            loadCart();
+        }
+
+        function checkout() {
+            const cart = getCart();
+            if (!cart.length) {
+                alert("Your cart is empty!");
+                return;
+            }
+
+            const buyer = {
+                name: document.getElementById("buyerName").value.trim(),
+                phone: document.getElementById("buyerPhone").value.trim(),
+                email: document.getElementById("buyerEmail").value.trim(),
+                address: document.getElementById("buyerAddress").value.trim()
+            };
+
+            if (!buyer.name || !buyer.phone || !buyer.email || !buyer.address) {
+                alert("⚠️ Please fill all buyer information fields!");
+                return;
+            }
+
+            // Save order history
+            const orders = JSON.parse(localStorage.getItem("buyerOrders") || "[]");
+            orders.push({
+                cart,
+                total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+                buyer,
+                status: "pending",
+                placedAt: new Date().toISOString()
+            });
+            localStorage.setItem("buyerOrders", JSON.stringify(orders));
+
+            // Clear cart
+            localStorage.removeItem(CART_KEY);
+            loadCart();
+
+            alert("✅ Order placed! Redirecting to checkout page...");
+            window.location.href = "checkout.html";
+        }
+
+        window.addEventListener("load", loadCart);
+        window.addEventListener("storage", loadCart);
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

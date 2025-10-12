@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MatrixMarket - Seller Login</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(8px);
+        }
+
+        .logo {
+            color: #06b6d4;
+            font-weight: 700;
+            font-size: 1.4rem;
+            text-shadow: 0 0 8px #4f46e5;
+        }
+
+        header nav a {
+            color: #fff;
+            margin: 0 10px;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        header nav a:hover {
+            color: #06b6d4;
+        }
+
+        .seller-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .seller-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.5);
+        }
+
+        .seller-card h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #06b6d4;
+            text-shadow: 0 0 8px #4f46e5;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(90deg, #06b6d4, #4f46e5);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #06b6d4;
+        }
+
+        .links {
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .links a {
+            color: #06b6d4;
+            text-decoration: none;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="seller-register.html">Register</a>
+        </nav>
+    </header>
+
+    <main class="seller-container">
+        <div class="seller-card">
+            <h1>🔑 Seller Portal</h1>
+            <p>Log in with your Email, Password, or Subscription Code</p>
+
+            <form id="loginForm">
+                <input id="sellerIdentifier" placeholder="Email or Subscription Code" required />
+                <input id="sellerPassword" type="password" placeholder="Password (optional)" />
+                <button type="submit">Login</button>
+            </form>
+
+            <div class="links">
+                <a href="seller-register.html">Register as Seller</a> |
+                <a href="index.html">Back to Home</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById("sellerIdentifier").value.trim().toUpperCase();
+            const pass = document.getElementById("sellerPassword").value.trim();
+            const sellers = JSON.parse(localStorage.getItem("sellers") || "[]");
+            const assignedCodes = JSON.parse(localStorage.getItem("assignedCodes") || "{}");
+
+            let seller = sellers.find(s => s.email?.toLowerCase() === id.toLowerCase());
+
+            // Login via subscription code
+            if (!seller) {
+                const matchedEmail = Object.keys(assignedCodes).find(email => assignedCodes[email].value === id);
+                if (matchedEmail) {
+                    const foundSeller = sellers.find(s => s.email === matchedEmail);
+                    if (foundSeller) {
+                        const expiry = new Date(assignedCodes[matchedEmail].expiry);
+                        if (expiry < new Date()) {
+                            alert("⚠️ This subscription code has expired. Renew subscription.");
+                            return;
+                        }
+                        seller = foundSeller;
+                        seller.subscription = "active";
+                    }
+                }
+            }
+
+            if (!seller) {
+                alert("❌ Seller not found. Please register first.");
+                return;
+            }
+
+            // Password check (optional for code login)
+            if (pass && seller.password !== pass) {
+                alert("❌ Incorrect password.");
+                return;
+            }
+
+            // ✅ Assign consistent access roles
+            seller.role = "seller";
+            seller.isSeller = true;
+            seller.status = "approved";
+            seller.paymentStatus = "paid";
+            seller.subscription = "active";
+
+            // ✅ Save globally
+            localStorage.setItem("currentSeller", JSON.stringify(seller));
+            localStorage.setItem("currentUser", JSON.stringify(seller));
+
+            alert("✅ Login successful! Redirecting to dashboard...");
+            window.location.href = "seller-dashboard.html";
+        });
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

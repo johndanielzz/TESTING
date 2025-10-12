@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MatrixMarket - Subscription Code</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: "Poppins", sans-serif;
+            margin: 0;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .code-box {
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(12px);
+        }
+
+        h2 {
+            color: #06b6d4;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .code-display {
+            font-size: 1.6rem;
+            font-weight: bold;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            background: #fff;
+            color: #222;
+            word-break: break-all;
+        }
+
+        .btn {
+            margin: 10px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #06b6d4;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: #4f46e5;
+            transform: scale(1.05);
+        }
+
+        .copied {
+            color: #22c55e;
+            font-size: 0.9rem;
+            display: none;
+            margin-top: 5px;
+        }
+
+        #expiry {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #fbbf24;
+        }
+
+        #qrCanvas {
+            margin: 15px auto;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="code-box">
+        <h2>🔑 Your Subscription Code</h2>
+        <p id="userName"></p>
+        <div id="codeDisplay" class="code-display">Loading...</div>
+        <canvas id="qrCanvas"></canvas>
+        <p id="expiry"></p>
+
+        <button class="btn" onclick="copyCode()">📋 Copy Code</button>
+        <button class="btn" onclick="downloadPDF()">⬇ Download PDF</button>
+        <p id="copyMsg" class="copied">✅ Code copied!</p>
+        <br>
+        <button class="btn" onclick="window.location.href='index.html'">⬅ Back to Dashboard</button>
+    </div>
+
+    <script>
+        // Generate secure unique code
+        function generateCode() {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            for (let i = 0; i < 12; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const sum = [...code].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+            code += "-" + (sum % 36).toString(36).toUpperCase().padStart(2, "0");
+            return code;
+        }
+
+        // Assign or fetch subscription code
+        function assignCodeToUser(user) {
+            let assigned = JSON.parse(localStorage.getItem("assignedCodes")) || {};
+            if (assigned[user.email]) return assigned[user.email];
+
+            const expiry = new Date();
+            expiry.setDate(expiry.getDate() + 30);
+            const newCode = { value: generateCode(), expiry: expiry.toISOString() };
+
+            assigned[user.email] = newCode;
+            localStorage.setItem("assignedCodes", JSON.stringify(assigned));
+            return newCode;
+        }
+
+        // Copy code to clipboard
+        function copyCode() {
+            const code = document.getElementById("codeDisplay").innerText;
+            if (code && !code.includes("❌") && !code.includes("⚠️")) {
+                navigator.clipboard.writeText(code).then(() => {
+                    const msg = document.getElementById("copyMsg");
+                    msg.style.display = "block";
+                    setTimeout(() => msg.style.display = "none", 2000);
+                });
+            }
+        }
+
+        // Download PDF
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+            const code = document.getElementById("codeDisplay").innerText;
+            const expiry = document.getElementById("expiry").innerText;
+
+            pdf.setFontSize(18);
+            pdf.text("MatrixMarket Subscription Code", 20, 20);
+            pdf.setFontSize(14);
+            pdf.text("Code: " + code, 20, 40);
+            pdf.text(expiry, 20, 60);
+            pdf.save("MatrixMarket_Code.pdf");
+        }
+
+        // Main logic
+        function initPage() {
+            const user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) {
+                document.getElementById("codeDisplay").innerText = "❌ Please log in first.";
+                return;
+            }
+
+            document.getElementById("userName").innerText = "👋 Welcome, " + (user.fullName || user.email);
+
+            // Check subscription
+            if (!user.subscription || user.subscription !== "active") {
+                document.getElementById("codeDisplay").innerText = "⚠️ You need an active subscription to view your code.";
+                return;
+            }
+
+            // Assign code
+            const userCode = assignCodeToUser(user);
+            const expiryDate = new Date(userCode.expiry);
+
+            if (expiryDate < new Date()) {
+                document.getElementById("codeDisplay").innerText = "⚠️ Your code has expired. Please renew your subscription.";
+                document.getElementById("expiry").innerText = "";
+                return;
+            }
+
+            document.getElementById("codeDisplay").innerText = userCode.value;
+            document.getElementById("expiry").innerText = "⏳ Expires on: " + expiryDate.toDateString();
+            QRCode.toCanvas(document.getElementById("qrCanvas"), userCode.value, { width: 200 });
+        }
+
+        window.onload = initPage;
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatrixMarket - Settings</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #4f46e5, #06b6d4);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: white;
+            margin: 0;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #06b6d4;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        header nav a {
+            margin-left: 20px;
+            color: white;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        header nav a:hover {
+            color: #06b6d4;
+        }
+
+        .settings-container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #06b6d4;
+        }
+
+        .settings-container input,
+        .settings-container select,
+        .settings-container button {
+            width: 100%;
+            margin: 10px 0;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .settings-container input,
+        .settings-container select {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .settings-container button {
+            background: #06b6d4;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .settings-container button:hover {
+            background: #4f46e5;
+        }
+
+        .danger {
+            background: #ef4444 !important;
+        }
+
+        .balance {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            background: rgba(6, 182, 212, 0.15);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #06b6d4;
+        }
+
+        .transactions {
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .transactions div {
+            background: rgba(0, 0, 0, 0.3);
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">MatrixMarket</div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="shop.html">Shop</a>
+            <a href="settings.html">⚙ Settings</a>
+            <a href="admin.html">Admin Panel</a>
+        </nav>
+    </header>
+
+    <div class="settings-container">
+        <h1>⚙ Account Settings</h1>
+
+        <label>Full Name</label>
+        <input type="text" id="fullName" placeholder="Enter your full name">
+
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter your email">
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter new password">
+
+        <button onclick="saveAccount()">💾 Save Changes</button>
+        <button class="danger" onclick="deleteAccount()">🗑 Delete Account</button>
+
+        <h2>💳 Payment Settings</h2>
+        <div class="balance">
+            Balance: <span id="balance">0</span> GMD
+        </div>
+
+        <label>Payment Method</label>
+        <select id="method">
+            <option value="Wave (6785316)">Wave (6785316)</option>
+            <option value="Comcash (6785316)">Comcash (6785316)</option>
+        </select>
+
+        <label>Amount</label>
+        <input type="number" id="amount" placeholder="Enter amount">
+
+        <button onclick="requestTopUp()">➕ Request Top-Up</button>
+        <button onclick="requestWithdraw()">💸 Request Withdrawal</button>
+
+        <div class="transactions">
+            <h2>📜 Pending Requests</h2>
+            <div id="pendingList"></div>
+        </div>
+    </div>
+
+    <script>
+        function loadSettings() {
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (user) {
+                document.getElementById("fullName").value = user.fullName || "";
+                document.getElementById("email").value = user.email || "";
+                document.getElementById("password").value = user.password || "";
+                document.getElementById("balance").innerText = user.balance || 0;
+            }
+            loadPending();
+        }
+
+        function saveUser(user) {
+            let users = JSON.parse(localStorage.getItem("users")) || [];
+            let found = false;
+            users = users.map(u => {
+                if (u.email === user.email) {
+                    found = true;
+                    return user;
+                }
+                return u;
+            });
+            if (!found) users.push(user);
+            localStorage.setItem("users", JSON.stringify(users));
+            localStorage.setItem("currentUser", JSON.stringify(user));
+        }
+
+        function saveAccount() {
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) return alert("⚠️ No user logged in.");
+            user.fullName = document.getElementById("fullName").value;
+            user.email = document.getElementById("email").value;
+            user.password = document.getElementById("password").value;
+            saveUser(user);
+            alert("✅ Account settings updated!");
+        }
+
+        function deleteAccount() {
+            if (!confirm("⚠️ Delete account?")) return;
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) return;
+            let users = JSON.parse(localStorage.getItem("users")) || [];
+            users = users.filter(u => u.email !== user.email);
+            localStorage.setItem("users", JSON.stringify(users));
+            localStorage.removeItem("currentUser");
+            alert("🗑 Account deleted.");
+            window.location.href = "register.html";
+        }
+
+        function requestTopUp() {
+            let amount = parseFloat(document.getElementById("amount").value);
+            let method = document.getElementById("method").value.trim();
+            if (!amount || amount <= 0) return alert("⚠️ Enter valid amount");
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) return;
+            let requests = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            requests.push({ email: user.email, type: "Top-Up", amount, method, status: "Pending" });
+            localStorage.setItem("pendingRequests", JSON.stringify(requests));
+            alert("📩 Top-Up request submitted. Awaiting admin approval.");
+            loadPending();
+        }
+
+        function requestWithdraw() {
+            let amount = parseFloat(document.getElementById("amount").value);
+            if (!amount || amount <= 0) return alert("⚠️ Enter valid amount");
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) return;
+            let requests = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            requests.push({ email: user.email, type: "Withdrawal", amount, method: "Balance", status: "Pending" });
+            localStorage.setItem("pendingRequests", JSON.stringify(requests));
+            alert("📩 Withdrawal request submitted. Awaiting admin approval.");
+            loadPending();
+        }
+
+        function loadPending() {
+            let user = JSON.parse(localStorage.getItem("currentUser"));
+            if (!user) return;
+            let requests = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            let list = document.getElementById("pendingList");
+            list.innerHTML = "";
+            requests.filter(r => r.email === user.email).forEach(r => {
+                list.innerHTML += `<div>📌 ${r.type} - ${r.amount} GMD via ${r.method || "N/A"} (${r.status})</div>`;
+            });
+        }
+
+        loadSettings();
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/firebase/7,14.1-0/firebase.js"></script>
+    <script src="./firebase.js"></script>
+    <script src="./admin.js"></script>
+    <script src="./assigned-code.js"></script>
+    <script src="./auth.js"></script>
+    <script src="./codeGen.js"></script>
+    <script src="./db.js"></script>
+    <script src="./message.js"></script>
+    <script src="./order.js"></script>
+    <script src="./product.js"></script>
+    <script src="./script.js"></script>
+    <script src="./seed.js"></script>
+    <script src="./seller.js"></script>
+    <script src="./server.js"></script>
+    <script src="./user.js"></script>
+    <script src="./routes/admin.js"></script>
+    <script src="./routes/auth.js"></script>
+    <script src="./routes/messages.js"></script>
+    <script src="./routes/orders.js"></script>
+    <script src="./routes/payments.js"></script>
+    <script src="./routes/products.js"></script>
+</body>
+
+</html>
