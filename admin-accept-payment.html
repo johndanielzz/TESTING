@@ -18,9 +18,12 @@
         }
 
         @keyframes gradientBG {
-            0%, 100% {
+
+            0%,
+            100% {
                 background-position: 0% 50%;
             }
+
             50% {
                 background-position: 100% 50%;
             }
@@ -70,7 +73,8 @@
             margin-top: 15px;
         }
 
-        th, td {
+        th,
+        td {
             padding: 12px 15px;
             text-align: center;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -185,7 +189,7 @@
     </footer>
 
     <script>
-        const API_BASE = "http://localhost:4000/api"; 
+        const API_BASE = "http://localhost:4000/api";
         // When online: const API_BASE = "https://your-backend-domain.com/api";
 
         function getToken() {
@@ -224,12 +228,12 @@
                     <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
                     <td>
                         ${p.status === "Pending"
-                            ? `
+                        ? `
                             <button class="btn accept" onclick="updatePayment('${p._id}', 'Approved')">Accept</button>
                             <button class="btn decline" onclick="updatePayment('${p._id}', 'Declined')">Decline</button>
                             `
-                            : "-"
-                        }
+                        : "-"
+                    }
                     </td>
                 `;
                 body.appendChild(row);
@@ -252,4 +256,5 @@
         window.onload = loadPayments;
     </script>
 </body>
+
 </html>

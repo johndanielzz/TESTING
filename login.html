@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+    const API_BASE = "https://matrixmarket.onrender.com/api";
+
 <script>
     // Set this to your backend URL
     // For local testing:
@@ -215,6 +217,27 @@
                 alert("❌ Invalid email or password. Please try again.");
             }
         }
+
+        async function login() {
+                const email = document.getElementById("email").value;
+                const password = document.getElementById("password").value;
+
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem("mm_token", data.token);
+                    alert("✅ Login successful");
+                    window.location.href = "dashboard-admin.html";
+                } else {
+                    alert("❌ " + data.message);
+                }
+            }
+
     </script>
 </body>
 

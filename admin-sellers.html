@@ -1,17 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<script>
-    // Set this to your backend URL
-    // For local testing:
-    const API_BASE = "http://localhost:4000/api";
-    // For live online use:
-    // const API_BASE = "https://your-backend-domain.com/api";
-
-    // Retrieve token (for logged-in user/admin)
-    function getToken() {
-        return localStorage.getItem("mm_token");
-    }
-</script>
 
 <head>
     <meta charset="UTF-8">
@@ -223,26 +211,41 @@
     <footer>© 2025 MatrixMarket | Admin Seller Control</footer>
 
     <script>
-        function renderSellers() {
-            const sellers = JSON.parse(localStorage.getItem("sellers")) || [];
+        const API_BASE = "http://localhost:4000/api";
+        // For live: const API_BASE = "https://your-domain.com/api";
+
+        function getToken() {
+            return localStorage.getItem("mm_token");
+        }
+
+        async function fetchSellers() {
+            const token = getToken();
+            const res = await fetch(`${API_BASE}/admin/sellers`, {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            return await res.json();
+        }
+
+        async function renderSellers() {
             const search = document.getElementById("searchBox").value.toLowerCase();
             const table = document.getElementById("sellerTable");
+            const sellers = await fetchSellers();
 
             const filtered = sellers.filter(s =>
                 s.email?.toLowerCase().includes(search) || s.name?.toLowerCase().includes(search)
             );
 
             table.innerHTML = `
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Plan</th>
-          <th>Store</th>
-          <th>Status</th>
-          <th>Proof</th>
-          <th>Action</th>
-        </tr>
-      `;
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Plan</th>
+                    <th>Store</th>
+                    <th>Status</th>
+                    <th>Proof</th>
+                    <th>Action</th>
+                </tr>
+            `;
 
             if (filtered.length === 0) {
                 table.innerHTML += `<tr><td colspan="7">No sellers found.</td></tr>`;
@@ -250,29 +253,42 @@
             }
 
             filtered.forEach(seller => {
-                const statusClass =
-                    seller.status === "Approved" ? "approved" :
-                        seller.status === "Declined" ? "declined" : "pending";
+                const statusClass = seller.status === "Approved"
+                    ? "approved" : seller.status === "Declined" ? "declined" : "pending";
 
                 const proofHTML = seller.proof
                     ? `<img src="${seller.proof}" class="proof" onclick="viewProof('${seller.proof}')">`
                     : "No proof";
 
                 table.innerHTML += `
-          <tr>
-            <td>${seller.name || "-"}</td>
-            <td>${seller.email}</td>
-            <td>${seller.plan || "Free"}</td>
-            <td>${seller.store || "N/A"}</td>
-            <td><span class="status ${statusClass}">${seller.status || "Pending"}</span></td>
-            <td>${proofHTML}</td>
-            <td>
-              <button class="btn approve" onclick="approveSeller('${seller.email}')">Approve</button>
-              <button class="btn decline" onclick="declineSeller('${seller.email}')">Decline</button>
-            </td>
-          </tr>
-        `;
+                    <tr>
+                        <td>${seller.name || "-"}</td>
+                        <td>${seller.email}</td>
+                        <td>${seller.plan || "Free"}</td>
+                        <td>${seller.store || "N/A"}</td>
+                        <td><span class="status ${statusClass}">${seller.status || "Pending"}</span></td>
+                        <td>${proofHTML}</td>
+                        <td>
+                            <button class="btn approve" onclick="updateSeller('${seller._id}', 'Approved')">Approve</button>
+                            <button class="btn decline" onclick="updateSeller('${seller._id}', 'Declined')">Decline</button>
+                        </td>
+                    </tr>
+                `;
             });
+        }
+
+        async function updateSeller(id, status) {
+            const token = getToken();
+            await fetch(`${API_BASE}/admin/sellers/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ status })
+            });
+            alert(`Seller ${status}!`);
+            renderSellers();
         }
 
         function viewProof(src) {
@@ -282,37 +298,21 @@
             modal.style.display = "flex";
         }
 
-        function approveSeller(email) {
-            let sellers = JSON.parse(localStorage.getItem("sellers")) || [];
-            sellers = sellers.map(s => {
-                if (s.email === email) {
-                    s.status = "Approved";
-                    s.paymentStatus = "Paid";
-                    s.subscription = "Active";
-                }
-                return s;
-            });
-            localStorage.setItem("sellers", JSON.stringify(sellers));
-            alert("✅ Seller approved successfully!");
-            renderSellers();
-        }
-
-        function declineSeller(email) {
-            let sellers = JSON.parse(localStorage.getItem("sellers")) || [];
-            sellers = sellers.map(s => {
-                if (s.email === email) {
-                    s.status = "Declined";
-                    s.paymentStatus = "Unpaid";
-                    s.subscription = "Inactive";
-                }
-                return s;
-            });
-            localStorage.setItem("sellers", JSON.stringify(sellers));
-            alert("❌ Seller declined.");
-            renderSellers();
-        }
-
         window.onload = renderSellers;
+    
+    async function updateSellerStatus(id, newStatus) {
+            const token = getToken();
+            await fetch(`${API_BASE}/admin/seller/${id}/status`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            alert(`Seller ${newStatus}`);
+        }
+
     </script>
 </body>
 
