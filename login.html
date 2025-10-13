@@ -2,6 +2,28 @@
 <html lang="en">
     const API_BASE = "https://matrixmarket.onrender.com/api";
 
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                saveToken(data.token);
+                alert("Login success!");
+                window.location.href = data.role === 'admin' ? 'dashboard-admin.html' : 'shop.html';
+            } else {
+                alert(data.message || "Login failed!");
+            }
+        }
+    </script>
+
 <script>
     // Set this to your backend URL
     // For local testing:
@@ -239,6 +261,8 @@
             }
 
     </script>
+    <script src="main.js"></script>
+
 </body>
 
 </html>

@@ -1,5 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+    <script src="main.js"></script>
+
+<script>
+    requireAuth('admin');
+
+    async function loadDashboard() {
+        const data = await apiRequest("/admin/overview");
+        document.getElementById("usersCount").innerText = data.usersCount;
+        document.getElementById("sellersCount").innerText = data.sellersCount;
+        document.getElementById("productsCount").innerText = data.productsCount;
+    }
+    window.onload = loadDashboard;
+</script>
+
 <script>
     // Set this to your backend URL
     // For local testing:

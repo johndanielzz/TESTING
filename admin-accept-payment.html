@@ -1,5 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+    // Set this to your backend URL
+    // For local testing:
+    const API_BASE = "http://localhost:4000/api";
+    // For live online use:
+    // const API_BASE = "https://your-backend-domain.com/api";
+
+    // Retrieve token (for logged-in user/admin)
+    function getToken() {
+        return localStorage.getItem("mm_token");
+    }
+</script>
+<script>
+    async function loadOverview() {
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/admin/overview`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("userCount").textContent = data.stats.usersCount;
+        document.getElementById("productCount").textContent = data.stats.productsCount;
+        document.getElementById("sellerCount").textContent = data.stats.sellersCount;
+
+        const recentContainer = document.getElementById("recentProducts");
+        data.recentProducts.forEach(p => {
+            const li = document.createElement("li");
+            li.textContent = p.title + " (" + p.seller?.shopName + ")";
+            recentContainer.appendChild(li);
+        });
+    }
+
+    window.addEventListener("DOMContentLoaded", loadOverview);
+</script>
 
 <head>
     <meta charset="UTF-8" />
@@ -181,7 +215,7 @@
             </thead>
             <tbody id="paymentBody"></tbody>
         </table>
-        <div class="empty" id="emptyMsg">Loading payments...</div>
+        <div class="empty" id="emptyMsg">No pending payments found.</div>
     </div>
 
     <footer>
@@ -189,72 +223,69 @@
     </footer>
 
     <script>
-        const API_BASE = "http://localhost:4000/api";
-        // When online: const API_BASE = "https://your-backend-domain.com/api";
-
-        function getToken() {
-            return localStorage.getItem("mm_token");
-        }
-
-        async function loadPayments() {
-            const token = getToken();
-            const res = await fetch(`${API_BASE}/admin/payments`, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            const data = await res.json();
-
+        function loadPayments() {
+            const payments = JSON.parse(localStorage.getItem("pendingRequests")) || [];
             const body = document.getElementById("paymentBody");
             const emptyMsg = document.getElementById("emptyMsg");
 
             body.innerHTML = "";
 
-            if (!data || data.length === 0) {
-                emptyMsg.textContent = "No pending payments found.";
+            if (payments.length === 0) {
                 emptyMsg.style.display = "block";
                 return;
+            } else {
+                emptyMsg.style.display = "none";
             }
 
-            emptyMsg.style.display = "none";
-
-            data.forEach((p) => {
+            payments.forEach((p, i) => {
                 const row = document.createElement("tr");
 
                 row.innerHTML = `
-                    <td>${p.name}</td>
-                    <td>${p.email}</td>
-                    <td>${p.amount}</td>
-                    <td>${p.method}</td>
-                    <td>${new Date(p.date).toLocaleDateString()}</td>
-                    <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
-                    <td>
-                        ${p.status === "Pending"
+          <td>${p.name}</td>
+          <td>${p.email}</td>
+          <td>${p.amount}</td>
+          <td>${p.method}</td>
+          <td>${p.date}</td>
+          <td><span class="status ${p.status.toLowerCase()}">${p.status}</span></td>
+          <td>
+            ${p.status === "Pending"
                         ? `
-                            <button class="btn accept" onclick="updatePayment('${p._id}', 'Approved')">Accept</button>
-                            <button class="btn decline" onclick="updatePayment('${p._id}', 'Declined')">Decline</button>
-                            `
+              <button class="btn accept" onclick="updatePayment(${i}, 'Approved')">Accept</button>
+              <button class="btn decline" onclick="updatePayment(${i}, 'Declined')">Decline</button>
+              `
                         : "-"
                     }
-                    </td>
-                `;
+          </td>
+        `;
                 body.appendChild(row);
             });
         }
 
-        async function updatePayment(id, newStatus) {
-            const token = getToken();
-            await fetch(`${API_BASE}/admin/payments/${id}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
+        function updatePayment(index, newStatus) {
+            let payments = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+            let userPayments = payments[index];
+            if (!userPayments) return;
+
+            userPayments.status = newStatus;
+            localStorage.setItem("pendingRequests", JSON.stringify(payments));
+
+            // Update user's own record
+            const userDataKeys = ["currentUser", "currentSeller", "loggedInUser", "user"];
+            for (const key of userDataKeys) {
+                const storedUser = JSON.parse(localStorage.getItem(key));
+                if (storedUser && storedUser.email === userPayments.email) {
+                    storedUser.paymentStatus = newStatus === "Approved" ? "Paid" : "Declined";
+                    storedUser.status = newStatus;
+                    localStorage.setItem(key, JSON.stringify(storedUser));
+                }
+            }
+
             loadPayments();
         }
 
         window.onload = loadPayments;
     </script>
+    <script src="main.js"></script>
 </body>
 
 </html>

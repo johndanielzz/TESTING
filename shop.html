@@ -1,5 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+    <script src="main.js"></script>
+
+    <script>
+        async function loadProducts() {
+            const products = await apiRequest("/products");
+            const container = document.getElementById("shop-items");
+            container.innerHTML = products.map(p => `
+        <div class="product">
+          <img src="${p.image}" alt="">
+          <h3>${p.name}</h3>
+          <p>${p.price}$</p>
+        </div>
+      `).join('');
+        }
+        window.onload = loadProducts;
+    </script>
+
 <script>
     // Set this to your backend URL
     // For local testing:
