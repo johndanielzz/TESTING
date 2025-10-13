@@ -1,31 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth')('admin');
 const Seller = require('../models/Seller');
 
-// GET all sellers
-router.get('/', auth('admin'), async (req, res) => {
+router.get('/', auth, async (req,res) => {
   const sellers = await Seller.find().sort({ createdAt: -1 });
   res.json(sellers);
 });
 
-// UPDATE seller status
-router.put('/:id', auth('admin'), async (req, res) => {
+router.put('/:id/status', auth, async (req,res) => {
   const { status } = req.body;
-  const seller = await Seller.findById(req.params.id);
-  if (!seller) return res.status(404).json({ message: 'Seller not found' });
-
-  seller.status = status;
-  if (status === "Approved") {
-    seller.subscription = "Active";
-    seller.paymentStatus = "Paid";
-  } else if (status === "Declined") {
-    seller.subscription = "Inactive";
-    seller.paymentStatus = "Unpaid";
-  }
-
-  await seller.save();
-  res.json(seller);
+  const s = await Seller.findById(req.params.id);
+  if (!s) return res.status(404).json({ message: 'Not found' });
+  s.status = status;
+  if (status === 'Approved') { s.subscription = 'Active'; s.paymentStatus = 'Paid'; }
+  else { s.subscription = 'Inactive'; s.paymentStatus = 'Unpaid'; }
+  await s.save();
+  const io = req.app.get('io'); if (io) io.emit('sellerUpdate', { id: s._id, status });
+  res.json(s);
 });
 
 module.exports = router;

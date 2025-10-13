@@ -1,72 +1,48 @@
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const path = require('path');
+
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const adminRoutes = require('./routes/admin'); // overview/users/products
 const adminPaymentsRoute = require('./routes/adminPayments');
-app.use('/api/admin/payments', adminPaymentsRoute);
-
-
-
 const adminSellersRoute = require('./routes/adminSellers');
-app.use('/api/admin/sellers', adminSellersRoute);
-
-
-
-
-
-
-
-
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const path = require("path");
-require("dotenv").config();
+const cartRoute = require('./routes/cart');
+const ordersRoute = require('./routes/orders');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
-// Connect MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Error:", err));
+// create server + socket.io
+const server = http.createServer(app);
+const { Server } = require('socket.io');
+const io = new Server(server, { cors: { origin: '*' }});
+app.set('io', io);
 
-// Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/products", require("./routes/products"));
-app.use("/api/admin", require("./routes/admin"));
-
-// Serve static frontend (optional)
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+io.on('connection', (socket) => {
+  console.log('Socket connected', socket.id);
+  socket.on('join', (room) => socket.join(room));
+  socket.on('disconnect', () => console.log('Socket disconnect', socket.id));
 });
 
-// Server
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/admin', adminRoutes);        // overview + admin users/products
+app.use('/api/admin/payments', adminPaymentsRoute);
+app.use('/api/admin/sellers', adminSellersRoute);
+app.use('/api/cart', cartRoute);
+app.use('/api/orders', ordersRoute);
 
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const path = require("path");
-require("dotenv").config();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log("❌ MongoDB Connection Error:", err));
-
-// Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/products", require("./routes/products"));
-app.use("/api/admin", require("./routes/admin"));
-
-// Static Frontend
-app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+// serve static frontend if any
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(()=> server.listen(PORT, ()=> console.log(`Server running on ${PORT}`)))
+  .catch(err => { console.error('Mongo error', err); process.exit(1); });

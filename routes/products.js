@@ -1,63 +1,36 @@
 const express = require('express');
+const router = express.Router();
 const Product = require('../models/Product');
 const Seller = require('../models/Seller');
 const auth = require('../middleware/auth');
-const router = express.Router();
 
-// Public: fetch products (with filters)
 router.get('/', async (req, res) => {
-  try {
-    const { q, seller, archived } = req.query;
-    const filter = {};
-    if (q) filter.title = { $regex: q, $options: 'i' };
-    if (seller) filter.seller = seller;
-    if (archived !== undefined) filter.archived = archived === 'true';
-    const products = await Product.find(filter).populate('seller');
-    res.json(products);
-  } catch (err) {
-    res.status(500).send('Server error');
-  }
+  const q = req.query.q || '';
+  const products = await Product.find({ title: { $regex: q, $options: 'i' } }).populate('seller');
+  res.json(products);
 });
 
-// Create product (seller)
-router.post('/', auth(), async (req, res) => {
-  try {
-    const { sellerId, title, description, price, images, quantity } = req.body;
-    if (!sellerId || !title) return res.status(400).json({ message: 'Missing fields' });
-
-    const seller = await Seller.findById(sellerId);
-    if (!seller) return res.status(400).json({ message: 'Seller not found' });
-
-    const p = new Product({ seller: sellerId, title, description, price, images, quantity });
-    await p.save();
-    res.json(p);
-  } catch (err) {
-    res.status(500).send('Server error');
-  }
+router.post('/', auth('seller'), async (req, res) => {
+  const { title, description, price, image, quantity } = req.body;
+  // find seller by user id
+  const seller = await Seller.findOne({ user: req.user.id });
+  if (!seller) return res.status(400).json({ message: 'Seller not found' });
+  const p = new Product({ seller: seller._id, title, description, price, image, quantity });
+  await p.save();
+  res.json(p);
 });
 
-// Update product (seller/admin)
 router.put('/:id', auth(), async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Not found' });
-    // Optionally check ownership if role !== admin
-    Object.assign(product, req.body);
-    await product.save();
-    res.json(product);
-  } catch (err) {
-    res.status(500).send('Server error');
-  }
+  const p = await Product.findById(req.params.id);
+  if (!p) return res.status(404).json({ message: 'Not found' });
+  Object.assign(p, req.body);
+  await p.save();
+  res.json(p);
 });
 
-// Delete or archive
 router.delete('/:id', auth('admin'), async (req, res) => {
-  try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Deleted' });
-  } catch (err) {
-    res.status(500).send('Server error');
-  }
+  await Product.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Deleted' });
 });
 
 module.exports = router;

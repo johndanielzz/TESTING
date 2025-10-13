@@ -3,13 +3,11 @@ const mongoose = require('mongoose');
 const ProductSchema = new mongoose.Schema({
   seller: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true },
   title: { type: String, required: true },
-  description: { type: String },
+  description: String,
   price: { type: Number, default: 0 },
-  currency: { type: String, default: 'USD' },
-  images: [String], // urls
+  image: String,
   quantity: { type: Number, default: 1 },
-  createdAt: { type: Date, default: Date.now },
-  archived: { type: Boolean, default: false }
-});
+  status: { type: String, enum: ['Active','Inactive'], default: 'Active' },
+}, { timestamps: true });
 
 module.exports = mongoose.model('Product', ProductSchema);
