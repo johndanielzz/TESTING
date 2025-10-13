@@ -1,290 +1,321 @@
-<!DOCTYPE html>
-<html lang="en">
-    <script src="main.js"></script>
+// =========================
+// MATRIX MARKETPLACE MAIN.JS (Updated for Live Real-Time Control)
+// =========================
 
-<script>
-    // Set this to your backend URL
-    // For local testing:
-    const API_BASE = "http://localhost:4000/api";
-    // For live online use:
-    // const API_BASE = "https://your-backend-domain.com/api";
+// -------------------------
+// Backend API base
+// -------------------------
+const API_BASE = "http://localhost:4000/api"; // change to live URL when online
+let socket;
 
-    // Retrieve token (for logged-in user/admin)
-    function getToken() {
-        return localStorage.getItem("mm_token");
+// -------------------------
+// Authentication helpers
+// -------------------------
+function getToken() {
+    return localStorage.getItem("mm_token");
+}
+
+async function requireAuth(role) {
+    const token = getToken();
+    if (!token) return window.location.href = "login.html";
+
+    const res = await fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return window.location.href = "login.html";
+
+    const data = await res.json();
+    if (role && data.role !== role) {
+        alert("Unauthorized access");
+        return window.location.href = "index.html";
     }
-</script>
-<script>
-    async function createProduct() {
-        const token = getToken();
-        const productData = {
-            sellerId: "YOUR_SELLER_ID_HERE",
-            title: document.getElementById("title").value,
-            description: document.getElementById("desc").value,
-            price: Number(document.getElementById("price").value),
-            images: [],
-            quantity: 1
-        };
+    return data;
+}
 
-        const res = await fetch(`${API_BASE}/products`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(productData)
-        });
+// -------------------------
+// Generic API request
+// -------------------------
+async function apiRequest(endpoint, method = "GET", body) {
+    const token = getToken();
+    const res = await fetch(API_BASE + endpoint, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    if (!res.ok) throw new Error((await res.json()).message || 'API Error');
+    return res.json();
+}
 
-        const data = await res.json();
-        alert(data.success ? "Product added!" : data.message);
+// -------------------------
+// Alert helper
+// -------------------------
+function showAlert(msg, type = "info") {
+    // optionally can integrate SweetAlert or Toast for nicer UI
+    alert(`${type.toUpperCase()}: ${msg}`);
+}
+
+// -------------------------
+// Format currency
+// -------------------------
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-GM', { style: 'currency', currency: 'GMD' }).format(amount);
+}
+
+// -------------------------
+// Initialize WebSocket for live updates
+// -------------------------
+function initSocket() {
+    if (!window.io) return; // make sure Socket.io client is loaded
+    socket = io(API_BASE.replace('/api', ''), { auth: { token: getToken() } });
+
+    // Listen for live updates
+    socket.on("paymentUpdate", data => {
+        const table = document.getElementById("paymentBody");
+        if (!table) return;
+        loadAdminPayments();
+    });
+
+    socket.on("sellerUpdate", data => {
+        const table = document.getElementById("sellerTable");
+        if (!table) return;
+        loadAdminSellers();
+    });
+
+    socket.on("userUpdate", data => {
+        const table = document.getElementById("usersTable");
+        if (!table) return;
+        loadAdminUsers();
+    });
+}
+
+// -------------------------
+// Page detection
+// -------------------------
+document.addEventListener("DOMContentLoaded", () => {
+    initSocket();
+    const page = document.body.dataset.page;
+
+    switch(page) {
+        case "index": loadShop(); break;
+        case "dashboard-admin": loadAdminDashboard(); break;
+        case "admin-users": loadAdminUsers(); break;
+        case "admin-sellers": loadAdminSellers(); break;
+        case "admin-edit-user-seller": loadAdminEditUsersSellers(); break;
+        case "admin-accept-payment":
+        case "payment-accept-decline-users": loadAdminPayments(); break;
+        case "seller-dashboard": loadSellerDashboard(); break;
+        case "seller-product": loadSellerProducts(); break;
+        case "cart": loadCart(); break;
+        case "checkout": loadCheckout(); break;
+        case "confirm-payment": loadConfirmPayment(); break;
+        case "payment-status-sellers": loadSellerPayments(); break;
+        case "shop": loadShop(); break;
+        case "chat": initChat(); break;
+        case "buyers-orders": loadBuyerOrders(); break;
+        case "subscription": loadSubscriptions(); break;
+        case "setting": loadSettings(); break;
     }
-</script>
+});
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MatrixMarket - Seller Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            margin: 0;
-            font-family: "Poppins", sans-serif;
-            background: linear-gradient(-45deg, #1e293b, #0f172a, #4f46e5, #06b6d4);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+// -------------------------
+// ADMIN DASHBOARD
+// -------------------------
+async function loadAdminDashboard() {
+    await requireAuth("admin");
+    const overview = await apiRequest("/admin/overview");
+    document.getElementById("totalUsers").textContent = overview.usersCount;
+    document.getElementById("totalSellers").textContent = overview.sellersCount;
+    document.getElementById("totalProducts").textContent = overview.productsCount;
 
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
+    renderRecentTable("recentSellers", overview.recentSellers.slice(-5).reverse(), "Seller");
+    renderRecentTable("recentUsers", overview.recentUsers.slice(-5).reverse(), "User");
+}
 
-            50% {
-                background-position: 100% 50%;
-            }
+// -------------------------
+// Table rendering helper
+// -------------------------
+function renderRecentTable(tableId, list, type) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    table.innerHTML = `<tr><th>${type} Name</th><th>Email</th><th>Status</th><th>Country</th></tr>`;
+    list.forEach(item => {
+        const statusClass = item.status === "Approved" ? "approved" : item.status === "Declined" ? "declined" : "pending";
+        table.innerHTML += `<tr>
+            <td>${item.name || "N/A"}</td>
+            <td>${item.email || "N/A"}</td>
+            <td class="${statusClass}">${item.status || "Pending"}</td>
+            <td>${item.country || "Unknown"}</td>
+        </tr>`;
+    });
+}
 
-            100% {
-                background-position: 0% 50%;
-            }
-        }
+// -------------------------
+// ADMIN USERS
+// -------------------------
+async function loadAdminUsers() {
+    await requireAuth("admin");
+    const users = await apiRequest("/admin/users");
+    const table = document.getElementById("usersTable");
+    if (!table) return;
+    table.innerHTML = `<tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr>`;
+    users.forEach(u => {
+        table.innerHTML += `<tr>
+            <td>${u.name}</td>
+            <td>${u.email}</td>
+            <td>${u.role}</td>
+            <td>
+                <button onclick="updateUserRole('${u._id}','admin')">Make Admin</button>
+                <button onclick="updateUserRole('${u._id}','buyer')">Make Buyer</button>
+                <button onclick="updateUserRole('${u._id}','seller')">Make Seller</button>
+            </td>
+        </tr>`;
+    });
+}
 
-        header {
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-        }
+async function updateUserRole(id, role) {
+    await apiRequest(`/admin/user/${id}/role`, "PUT", { role });
+    showAlert("Role updated successfully!", "success");
+    socket.emit("userChanged", { id, role });
+}
 
-        .logo {
-            font-weight: bold;
-            font-size: 1.3rem;
-            color: #06b6d4;
-        }
+// -------------------------
+// ADMIN SELLERS
+// -------------------------
+async function loadAdminSellers() {
+    await requireAuth("admin");
+    const sellers = await apiRequest("/admin/sellers");
+    const table = document.getElementById("sellerTable");
+    if (!table) return;
+    table.innerHTML = `<tr><th>Name</th><th>Email</th><th>Status</th><th>Action</th></tr>`;
+    sellers.forEach(s => {
+        const statusClass = s.status === "Approved" ? "approved" : s.status === "Declined" ? "declined" : "pending";
+        table.innerHTML += `<tr>
+            <td>${s.name}</td><td>${s.email}</td><td class="${statusClass}">${s.status}</td>
+            <td>
+                <button onclick="updateSellerStatus('${s._id}','Approved')">Approve</button>
+                <button onclick="updateSellerStatus('${s._id}','Declined')">Decline</button>
+            </td>
+        </tr>`;
+    });
+}
 
-        header nav a {
-            color: #06b6d4;
-            margin-left: 15px;
-            text-decoration: none;
-            font-weight: bold;
-        }
+async function updateSellerStatus(id, status) {
+    await apiRequest(`/admin/seller/${id}/status`, "PUT", { status });
+    showAlert("Seller status updated!", "success");
+    socket.emit("sellerChanged", { id, status });
+}
 
-        header nav a:hover {
-            text-decoration: underline;
-        }
+// -------------------------
+// ADMIN PAYMENTS (Real-Time)
+// -------------------------
+async function loadAdminPayments() {
+    await requireAuth("admin");
+    const payments = await apiRequest("/admin/payments");
+    const table = document.getElementById("paymentBody");
+    if (!table) return;
+    table.innerHTML = "";
+    payments.forEach(p => {
+        const statusClass = p.status.toLowerCase();
+        table.innerHTML += `<tr>
+            <td>${p.name}</td>
+            <td>${p.email}</td>
+            <td>${formatCurrency(p.amount)}</td>
+            <td>${p.method}</td>
+            <td>${new Date(p.date).toLocaleString()}</td>
+            <td><span class="status ${statusClass}">${p.status}</span></td>
+            <td>
+                ${p.status === "Pending"
+                    ? `<button onclick="updatePayment('${p._id}','Approved')">Accept</button>
+                       <button onclick="updatePayment('${p._id}','Declined')">Decline</button>`
+                    : "-"
+                }
+            </td>
+        </tr>`;
+    });
+}
 
-        .dashboard {
-            flex: 1;
-            padding: 40px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
+async function updatePayment(id, status) {
+    await apiRequest(`/admin/payment/${id}/status`, "PUT", { status });
+    showAlert("Payment status updated!", "success");
+    socket.emit("paymentChanged", { id, status });
+}
 
-        .welcome {
-            font-size: 1.4rem;
-            margin-bottom: 25px;
-        }
+// -------------------------
+// SELLER DASHBOARD & PAYMENTS
+// -------------------------
+async function loadSellerDashboard() {
+    await requireAuth("seller");
+    const products = await apiRequest(`/products/seller/me`);
+    renderSellerProducts(products);
+}
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
+function renderSellerProducts(products) {
+    const table = document.getElementById("sellerProductTable");
+    if (!table) return;
+    table.innerHTML = `<tr><th>Title</th><th>Price</th><th>Status</th></tr>`;
+    products.forEach(p => {
+        table.innerHTML += `<tr>
+            <td>${p.title}</td>
+            <td>${formatCurrency(p.price)}</td>
+            <td>${p.status}</td>
+        </tr>`;
+    });
+}
 
-        .card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 16px;
-            text-align: center;
-            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
-        }
+async function loadSellerPayments() {
+    await requireAuth("seller");
+    const payments = await apiRequest("/seller/payments");
+    const table = document.getElementById("paymentBody");
+    if (!table) return;
+    table.innerHTML = "";
+    payments.forEach(p => {
+        table.innerHTML += `<tr>
+            <td>${p.name}</td>
+            <td>${formatCurrency(p.amount)}</td>
+            <td>${p.status}</td>
+        </tr>`;
+    });
+}
 
-        .card h3 {
-            font-size: 1.1rem;
-            color: #06b6d4;
-        }
+// -------------------------
+// CART / CHECKOUT
+// -------------------------
+function loadCart() {
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    const container = document.getElementById("cartItems");
+    if (!container) return;
+    container.innerHTML = cart.map(id => `<div>Product ID: ${id}</div>`).join('');
+}
 
-        .card p {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 10px 0 0;
-        }
+function loadCheckout() { loadCart(); }
+function loadConfirmPayment() { showAlert("Payment confirmed!", "success"); }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            overflow: hidden;
-        }
+// -------------------------
+// ORDERS
+// -------------------------
+async function loadBuyerOrders() {
+    await requireAuth();
+    const orders = await apiRequest(`/orders`);
+    const table = document.getElementById("ordersTable");
+    if (!table) return;
+    table.innerHTML = `<tr><th>Order ID</th><th>Status</th><th>Total</th></tr>`;
+    orders.forEach(o => {
+        table.innerHTML += `<tr>
+            <td>${o._id}</td>
+            <td>${o.status}</td>
+            <td>${formatCurrency(o.total)}</td>
+        </tr>`;
+    });
+}
 
-        th,
-        td {
-            padding: 15px;
-            text-align: left;
-        }
+// -------------------------
+// CHAT
+// -------------------------
+function initChat() { console.log("Chat initialized (implement socket.io)"); }
 
-        th {
-            background: rgba(0, 0, 0, 0.4);
-            color: #06b6d4;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .logout-btn {
-            margin-top: 30px;
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            color: #fff;
-            border: none;
-            padding: 12px 22px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .logout-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 15px #ef4444;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 0.9rem;
-            background: rgba(255, 255, 255, 0.08);
-        }
-    </style>
-</head>
-
-<body>
-    <header>
-        <div class="logo">MatrixMarket</div>
-        <nav>
-            <a href="shop.html">Shop</a>
-            <a href="seller-products.html">My Products</a>
-            <a href="#" id="logoutBtn">Logout</a>
-        </nav>
-    </header>
-
-    <div class="dashboard">
-        <h2 class="welcome">👋 Welcome, <span id="sellerName"></span></h2>
-
-        <div class="stats">
-            <div class="card">
-                <h3>Total Products</h3>
-                <p id="productCount">0</p>
-            </div>
-            <div class="card">
-                <h3>Total Sales</h3>
-                <p id="salesCount">0</p>
-            </div>
-            <div class="card">
-                <h3>Total Earnings ($)</h3>
-                <p id="totalEarnings">0.00</p>
-            </div>
-        </div>
-
-        <h3>Recent Sales</h3>
-        <table id="salesTable">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Buyer</th>
-                    <th>Price ($)</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-
-        <button class="logout-btn" id="logout">Logout</button>
-    </div>
-
-    <footer>
-        <p>© 2025 MatrixMarket | Seller Dashboard</p>
-    </footer>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const seller = JSON.parse(localStorage.getItem("currentSeller"));
-            if (!seller) {
-                alert("No seller logged in!");
-                window.location.href = "seller-login.html";
-                return;
-            }
-
-            document.getElementById("sellerName").textContent = seller.name;
-
-            // Seller's Products
-            const allProducts = JSON.parse(localStorage.getItem("products")) || [];
-            const myProducts = allProducts.filter(p => p.sellerEmail === seller.email);
-            document.getElementById("productCount").textContent = myProducts.length;
-
-            // Seller's Purchases
-            const allPurchases = JSON.parse(localStorage.getItem("purchases")) || [];
-            const mySales = allPurchases.filter(p => p.sellerEmail === seller.email);
-
-            document.getElementById("salesCount").textContent = mySales.length;
-
-            const totalEarnings = mySales.reduce((sum, sale) => sum + parseFloat(sale.price), 0);
-            document.getElementById("totalEarnings").textContent = totalEarnings.toFixed(2);
-
-            // Fill Table
-            const tbody = document.querySelector("#salesTable tbody");
-            tbody.innerHTML = "";
-            if (mySales.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No sales yet.</td></tr>`;
-            } else {
-                mySales.sort((a, b) => new Date(b.date) - new Date(a.date));
-                mySales.forEach(sale => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-            <td>${sale.productName}</td>
-            <td>${sale.buyerEmail}</td>
-            <td>${sale.price}</td>
-            <td>${new Date(sale.date).toLocaleString()}</td>
-          `;
-                    tbody.appendChild(tr);
-                });
-            }
-
-            // Logout
-            document.getElementById("logout").addEventListener("click", () => {
-                localStorage.removeItem("currentSeller");
-                window.location.href = "seller-login.html";
-            });
-        });
-    </script>
-</body>
-
-</html>
+// -------------------------
+// SUBSCRIPTIONS / SETTINGS
+// -------------------------
+async function loadSubscriptions() { await requireAuth(); console.log("Load subscriptions"); }
+async function loadSettings() { await requireAuth(); console.log("Load user settings"); }
