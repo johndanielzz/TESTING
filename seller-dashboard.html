@@ -1,22 +1,18 @@
 // =========================
-// MATRIX MARKETPLACE MAIN.JS (Updated for Live Real-Time Control)
+// MATRIX MARKETPLACE MAIN.JS (Global Online Control)
 // =========================
 
 // -------------------------
 // Backend API base
 // -------------------------
-const API_BASE = "http://localhost:4000/api"; // change to live URL when online
+const API_BASE = "https://your-live-domain.com/api"; // live API URL
 let socket;
 
 // -------------------------
 // Authentication helpers
 // -------------------------
-function getToken() {
-    return localStorage.getItem("mm_token");
-}
-
 async function requireAuth(role) {
-    const token = getToken();
+    const token = sessionStorage.getItem("mm_token"); // token only stored temporarily
     if (!token) return window.location.href = "login.html";
 
     const res = await fetch(`${API_BASE}/auth/me`, { headers: { 'Authorization': 'Bearer ' + token } });
@@ -34,7 +30,7 @@ async function requireAuth(role) {
 // Generic API request
 // -------------------------
 async function apiRequest(endpoint, method = "GET", body) {
-    const token = getToken();
+    const token = sessionStorage.getItem("mm_token");
     const res = await fetch(API_BASE + endpoint, {
         method,
         headers: {
@@ -43,7 +39,10 @@ async function apiRequest(endpoint, method = "GET", body) {
         },
         body: body ? JSON.stringify(body) : undefined
     });
-    if (!res.ok) throw new Error((await res.json()).message || 'API Error');
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'API Error' }));
+        throw new Error(err.message);
+    }
     return res.json();
 }
 
@@ -51,7 +50,6 @@ async function apiRequest(endpoint, method = "GET", body) {
 // Alert helper
 // -------------------------
 function showAlert(msg, type = "info") {
-    // optionally can integrate SweetAlert or Toast for nicer UI
     alert(`${type.toUpperCase()}: ${msg}`);
 }
 
@@ -66,27 +64,13 @@ function formatCurrency(amount) {
 // Initialize WebSocket for live updates
 // -------------------------
 function initSocket() {
-    if (!window.io) return; // make sure Socket.io client is loaded
-    socket = io(API_BASE.replace('/api', ''), { auth: { token: getToken() } });
+    if (!window.io) return;
+    socket = io(API_BASE.replace('/api', ''), { auth: { token: sessionStorage.getItem("mm_token") } });
 
-    // Listen for live updates
-    socket.on("paymentUpdate", data => {
-        const table = document.getElementById("paymentBody");
-        if (!table) return;
-        loadAdminPayments();
-    });
-
-    socket.on("sellerUpdate", data => {
-        const table = document.getElementById("sellerTable");
-        if (!table) return;
-        loadAdminSellers();
-    });
-
-    socket.on("userUpdate", data => {
-        const table = document.getElementById("usersTable");
-        if (!table) return;
-        loadAdminUsers();
-    });
+    socket.on("paymentUpdate", loadAdminPayments);
+    socket.on("sellerUpdate", loadAdminSellers);
+    socket.on("userUpdate", loadAdminUsers);
+    socket.on("cartUpdate", loadCart); // update buyer carts globally
 }
 
 // -------------------------
@@ -119,39 +103,74 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // -------------------------
+// SHOP
+// -------------------------
+async function loadShop() {
+    await requireAuth();
+    const container = document.getElementById("product-list");
+    if (!container) return;
+
+    const products = await apiRequest("/products");
+    container.innerHTML = products.map(p => `
+        <div class="product-card">
+            <img src="${p.image}" alt="${p.title}">
+            <h3>${p.title}</h3>
+            <p>${formatCurrency(p.price)}</p>
+            <button onclick="addToCart('${p._id}')">Add to Cart</button>
+        </div>
+    `).join('');
+}
+
+async function addToCart(productId) {
+    try {
+        await apiRequest("/cart/add", "POST", { productId });
+        showAlert("Product added to cart!", "success");
+        socket.emit("cartChanged"); // notify server for global updates
+    } catch (e) {
+        showAlert(e.message, "error");
+    }
+}
+
+// -------------------------
+// CART
+// -------------------------
+async function loadCart() {
+    await requireAuth();
+    const container = document.getElementById("cartItems");
+    if (!container) return;
+
+    const cart = await apiRequest("/cart");
+    container.innerHTML = cart.items.map(item => `
+        <div>
+            ${item.product.title} - ${formatCurrency(item.product.price)}
+            <button onclick="removeFromCart('${item.product._id}')">Remove</button>
+        </div>
+    `).join('');
+}
+
+async function removeFromCart(productId) {
+    await apiRequest("/cart/remove", "POST", { productId });
+    showAlert("Removed from cart", "success");
+    socket.emit("cartChanged");
+}
+
+// -------------------------
 // ADMIN DASHBOARD
 // -------------------------
 async function loadAdminDashboard() {
     await requireAuth("admin");
     const overview = await apiRequest("/admin/overview");
+
     document.getElementById("totalUsers").textContent = overview.usersCount;
     document.getElementById("totalSellers").textContent = overview.sellersCount;
     document.getElementById("totalProducts").textContent = overview.productsCount;
 
-    renderRecentTable("recentSellers", overview.recentSellers.slice(-5).reverse(), "Seller");
-    renderRecentTable("recentUsers", overview.recentUsers.slice(-5).reverse(), "User");
+    renderRecentTable("recentSellers", overview.recentSellers, "Seller");
+    renderRecentTable("recentUsers", overview.recentUsers, "User");
 }
 
 // -------------------------
-// Table rendering helper
-// -------------------------
-function renderRecentTable(tableId, list, type) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    table.innerHTML = `<tr><th>${type} Name</th><th>Email</th><th>Status</th><th>Country</th></tr>`;
-    list.forEach(item => {
-        const statusClass = item.status === "Approved" ? "approved" : item.status === "Declined" ? "declined" : "pending";
-        table.innerHTML += `<tr>
-            <td>${item.name || "N/A"}</td>
-            <td>${item.email || "N/A"}</td>
-            <td class="${statusClass}">${item.status || "Pending"}</td>
-            <td>${item.country || "Unknown"}</td>
-        </tr>`;
-    });
-}
-
-// -------------------------
-// ADMIN USERS
+// ADMIN USERS / SELLERS / PAYMENTS
 // -------------------------
 async function loadAdminUsers() {
     await requireAuth("admin");
@@ -165,9 +184,9 @@ async function loadAdminUsers() {
             <td>${u.email}</td>
             <td>${u.role}</td>
             <td>
-                <button onclick="updateUserRole('${u._id}','admin')">Make Admin</button>
-                <button onclick="updateUserRole('${u._id}','buyer')">Make Buyer</button>
-                <button onclick="updateUserRole('${u._id}','seller')">Make Seller</button>
+                <button onclick="updateUserRole('${u._id}','admin')">Admin</button>
+                <button onclick="updateUserRole('${u._id}','buyer')">Buyer</button>
+                <button onclick="updateUserRole('${u._id}','seller')">Seller</button>
             </td>
         </tr>`;
     });
@@ -175,13 +194,10 @@ async function loadAdminUsers() {
 
 async function updateUserRole(id, role) {
     await apiRequest(`/admin/user/${id}/role`, "PUT", { role });
-    showAlert("Role updated successfully!", "success");
-    socket.emit("userChanged", { id, role });
+    showAlert("Role updated!", "success");
+    socket.emit("userChanged");
 }
 
-// -------------------------
-// ADMIN SELLERS
-// -------------------------
 async function loadAdminSellers() {
     await requireAuth("admin");
     const sellers = await apiRequest("/admin/sellers");
@@ -189,9 +205,10 @@ async function loadAdminSellers() {
     if (!table) return;
     table.innerHTML = `<tr><th>Name</th><th>Email</th><th>Status</th><th>Action</th></tr>`;
     sellers.forEach(s => {
-        const statusClass = s.status === "Approved" ? "approved" : s.status === "Declined" ? "declined" : "pending";
         table.innerHTML += `<tr>
-            <td>${s.name}</td><td>${s.email}</td><td class="${statusClass}">${s.status}</td>
+            <td>${s.name}</td>
+            <td>${s.email}</td>
+            <td>${s.status}</td>
             <td>
                 <button onclick="updateSellerStatus('${s._id}','Approved')">Approve</button>
                 <button onclick="updateSellerStatus('${s._id}','Declined')">Decline</button>
@@ -203,12 +220,9 @@ async function loadAdminSellers() {
 async function updateSellerStatus(id, status) {
     await apiRequest(`/admin/seller/${id}/status`, "PUT", { status });
     showAlert("Seller status updated!", "success");
-    socket.emit("sellerChanged", { id, status });
+    socket.emit("sellerChanged");
 }
 
-// -------------------------
-// ADMIN PAYMENTS (Real-Time)
-// -------------------------
 async function loadAdminPayments() {
     await requireAuth("admin");
     const payments = await apiRequest("/admin/payments");
@@ -216,20 +230,18 @@ async function loadAdminPayments() {
     if (!table) return;
     table.innerHTML = "";
     payments.forEach(p => {
-        const statusClass = p.status.toLowerCase();
         table.innerHTML += `<tr>
             <td>${p.name}</td>
             <td>${p.email}</td>
             <td>${formatCurrency(p.amount)}</td>
             <td>${p.method}</td>
             <td>${new Date(p.date).toLocaleString()}</td>
-            <td><span class="status ${statusClass}">${p.status}</span></td>
+            <td>${p.status}</td>
             <td>
-                ${p.status === "Pending"
+                ${p.status === "Pending" 
                     ? `<button onclick="updatePayment('${p._id}','Approved')">Accept</button>
-                       <button onclick="updatePayment('${p._id}','Declined')">Decline</button>`
-                    : "-"
-                }
+                       <button onclick="updatePayment('${p._id}','Declined')">Decline</button>` 
+                    : "-"}
             </td>
         </tr>`;
     });
@@ -237,16 +249,16 @@ async function loadAdminPayments() {
 
 async function updatePayment(id, status) {
     await apiRequest(`/admin/payment/${id}/status`, "PUT", { status });
-    showAlert("Payment status updated!", "success");
-    socket.emit("paymentChanged", { id, status });
+    showAlert("Payment updated!", "success");
+    socket.emit("paymentChanged");
 }
 
 // -------------------------
-// SELLER DASHBOARD & PAYMENTS
+// SELLER DASHBOARD
 // -------------------------
 async function loadSellerDashboard() {
     await requireAuth("seller");
-    const products = await apiRequest(`/products/seller/me`);
+    const products = await apiRequest("/products/seller/me");
     renderSellerProducts(products);
 }
 
@@ -279,24 +291,11 @@ async function loadSellerPayments() {
 }
 
 // -------------------------
-// CART / CHECKOUT
-// -------------------------
-function loadCart() {
-    const cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const container = document.getElementById("cartItems");
-    if (!container) return;
-    container.innerHTML = cart.map(id => `<div>Product ID: ${id}</div>`).join('');
-}
-
-function loadCheckout() { loadCart(); }
-function loadConfirmPayment() { showAlert("Payment confirmed!", "success"); }
-
-// -------------------------
-// ORDERS
+// ORDERS / CHAT / SETTINGS / SUBSCRIPTIONS
 // -------------------------
 async function loadBuyerOrders() {
     await requireAuth();
-    const orders = await apiRequest(`/orders`);
+    const orders = await apiRequest("/orders");
     const table = document.getElementById("ordersTable");
     if (!table) return;
     table.innerHTML = `<tr><th>Order ID</th><th>Status</th><th>Total</th></tr>`;
@@ -309,13 +308,6 @@ async function loadBuyerOrders() {
     });
 }
 
-// -------------------------
-// CHAT
-// -------------------------
-function initChat() { console.log("Chat initialized (implement socket.io)"); }
-
-// -------------------------
-// SUBSCRIPTIONS / SETTINGS
-// -------------------------
+function initChat() { console.log("Chat initialized (Socket.io required)"); }
 async function loadSubscriptions() { await requireAuth(); console.log("Load subscriptions"); }
-async function loadSettings() { await requireAuth(); console.log("Load user settings"); }
+async function loadSettings() { await requireAuth(); console.log("Load settings"); }
